@@ -114,8 +114,20 @@ a:hover { text-decoration: underline; }
 }
 .tab:hover { color: var(--ink); }
 .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-.home-tab { margin-right:auto; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; min-width:32px; padding-left:8px; padding-right:8px; color:var(--accent); border-bottom-color:transparent; }
-.home-tab:hover { color:var(--accent); background:var(--line-2); }
+.home-tab {
+  margin-right: auto; align-self: center; text-decoration: none;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 13px 6px 11px; border: 0; border-radius: 999px;
+  font-size: 11.5px; font-weight: 700; letter-spacing: .09em; color: #fff;
+  background: linear-gradient(135deg, #3b7bff 0%, var(--accent) 55%, #2358c9 100%);
+  box-shadow: 0 1px 2px rgba(35,88,201,.25), 0 4px 12px rgba(47,111,237,.22);
+  transition: transform .15s ease, box-shadow .15s ease, filter .15s ease;
+}
+.home-tab svg { width: 14px; height: 14px; flex: none; }
+.home-tab:hover { color: #fff; transform: translateY(-1px); filter: brightness(1.06);
+  box-shadow: 0 2px 4px rgba(35,88,201,.28), 0 8px 18px rgba(47,111,237,.28); }
+.home-tab:active { transform: translateY(0); box-shadow: 0 1px 2px rgba(35,88,201,.3); }
+.home-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .tab .cnt {
   display: inline-block; margin-left: 4px; font-size: clamp(9px, .7vw, 10px); font-weight: 600;
   color: var(--muted); background: var(--line-2); border-radius: 20px; padding: 1px 5px;
@@ -413,7 +425,7 @@ details.sch > summary::-webkit-details-marker { display: none; }
 
 <nav class="tabs">
   <div class="tabs-inner">
-    <a class="tab home-tab" href="#/b2b" aria-label="Home" title="Home">H</a>
+    <a class="tab home-tab" href="#/b2b" aria-label="Home" title="Home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5"/></svg>HOME</a>
     <button class="tab active" data-tab="b2b">B2B API<span class="cnt">22</span></button>
     <button class="tab" data-tab="aggr">Provider API<span class="cnt">23</span></button>
     <button class="tab" data-tab="mancala">Mancala B2B API<span class="cnt">22</span></button>
