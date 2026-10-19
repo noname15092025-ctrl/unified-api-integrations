@@ -129,6 +129,27 @@ a:hover { text-decoration: underline; }
   box-shadow: 0 2px 3px rgba(35,88,201,.25), 0 5px 12px rgba(47,111,237,.22); }
 .home-tab:active { transform: translateY(0); box-shadow: 0 1px 2px rgba(35,88,201,.3); }
 .home-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.search-tab {
+  display: none; align-self: center; align-items: center; justify-content: center;
+  width: 32px; height: 32px; margin: 0 auto 0 8px; padding: 0; border: 0; border-radius: 50%;
+  color: #fff; cursor: pointer;
+  background: linear-gradient(135deg, #3b7bff 0%, var(--accent) 55%, #2358c9 100%);
+  box-shadow: 0 1px 2px rgba(35,88,201,.25), 0 4px 12px rgba(47,111,237,.22);
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.search-tab svg { width: 15px; height: 15px; }
+.search-tab:hover, .search-tab[aria-expanded="true"] { transform: translateY(-1px) scale(1.05);
+  box-shadow: 0 2px 3px rgba(35,88,201,.25), 0 5px 12px rgba(47,111,237,.22); }
+.search-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tabs.is-fixed .home-tab { margin-right: 0; }
+.tabs.is-fixed .search-tab { display: inline-flex; }
+.sticky-search {
+  position: absolute; top: calc(100% + 8px); left: max(12px, calc((100% - 1680px) / 2 + 12px)); z-index: 70;
+  width: min(460px, calc(100vw - 24px)); padding: 10px; border-radius: 12px;
+  background: #121821; box-shadow: 0 10px 30px rgba(8,12,20,.35);
+}
+.sticky-search[hidden] { display: none; }
+.sticky-search .search-wrap { margin: 0; width: 100%; min-width: 0; }
 .tab .cnt {
   display: inline-block; margin-left: 4px; font-size: clamp(9px, .7vw, 10px); font-weight: 600;
   color: var(--muted); background: var(--line-2); border-radius: 20px; padding: 1px 5px;
@@ -427,6 +448,8 @@ details.sch > summary::-webkit-details-marker { display: none; }
 <nav class="tabs">
   <div class="tabs-inner">
     <a class="tab home-tab" href="#/b2b" aria-label="Home" title="Home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5"/></svg>HOME</a>
+    <button class="search-tab" type="button" aria-label="Поиск" title="Поиск ( / )" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg></button>
+    <div class="sticky-search" hidden></div>
     <button class="tab active" data-tab="b2b">B2B API<span class="cnt">22</span></button>
     <button class="tab" data-tab="aggr">Provider API<span class="cnt">23</span></button>
     <button class="tab" data-tab="mancala">Mancala B2B API<span class="cnt">22</span></button>
@@ -1373,6 +1396,42 @@ details.sch > summary::-webkit-details-marker { display: none; }
     update();
   }
 
+  /* ---------------------------------------------------------- sticky search */
+  var stickyBtn, stickyBox, searchWrap, searchHome;
+  function openStickySearch() {
+    if (!stickyBox || !stickyBox.hidden) { if (searchInput) searchInput.focus(); return; }
+    stickyBox.appendChild(searchWrap);
+    stickyBox.hidden = false;
+    stickyBtn.setAttribute("aria-expanded", "true");
+    searchInput.focus();
+    if (searchInput.value.trim()) runSearch();
+  }
+  function closeStickySearch() {
+    if (!stickyBox || stickyBox.hidden) return;
+    resultsEl.classList.remove("on");
+    searchHome.parent.insertBefore(searchWrap, searchHome.next);
+    stickyBox.hidden = true;
+    stickyBtn.setAttribute("aria-expanded", "false");
+  }
+  function initStickySearch() {
+    stickyBtn = document.querySelector(".search-tab");
+    stickyBox = document.querySelector(".sticky-search");
+    searchWrap = document.querySelector(".search-wrap");
+    if (!stickyBtn || !stickyBox || !searchWrap) return;
+    searchHome = { parent: searchWrap.parentNode, next: searchWrap.nextSibling };
+    stickyBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      if (stickyBox.hidden) openStickySearch(); else closeStickySearch();
+    });
+    document.addEventListener("click", function (e) {
+      if (!stickyBox.hidden && !e.target.closest(".sticky-search") && !e.target.closest(".search-tab")) closeStickySearch();
+    });
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeStickySearch(); });
+    var bar = document.querySelector(".tabs");
+    new MutationObserver(function () { if (!bar.classList.contains("is-fixed")) closeStickySearch(); }).observe(bar, { attributes: true, attributeFilter: ["class"] });
+    resultsEl.addEventListener("click", function (e) { if (e.target.closest(".res")) setTimeout(closeStickySearch, 0); });
+  }
+
   /* ---------------------------------------------------------- init */
   var EDITS={}; try{EDITS=JSON.parse(document.getElementById("portal-user-edits").textContent||"{}");}catch(e){}
   var EDIT_KEY="api-portal-edits-v1:"+location.pathname,editMode=false;
@@ -1405,6 +1464,7 @@ details.sch > summary::-webkit-details-marker { display: none; }
     searchInput = document.getElementById("search");
     resultsEl = document.getElementById("results");
     initTabFollowScroll();
+    initStickySearch();
 
     document.querySelectorAll(".tab").forEach(function (t) {
       t.addEventListener("click", function () {
@@ -1468,7 +1528,7 @@ details.sch > summary::-webkit-details-marker { display: none; }
     });
     document.addEventListener("keydown", function (e) {
       if (e.key === "Escape") { var preview = document.querySelector(".image-lightbox"); if (preview) preview.remove(); }
-      if (e.key === "/" && document.activeElement.tagName !== "INPUT") { e.preventDefault(); searchInput.focus(); }
+      if (e.key === "/" && document.activeElement.tagName !== "INPUT") { e.preventDefault(); if (document.querySelector(".tabs.is-fixed")) openStickySearch(); else searchInput.focus(); }
     });
 
     window.addEventListener("hashchange", function () { parseHash(); render(); revealOpen(); });
