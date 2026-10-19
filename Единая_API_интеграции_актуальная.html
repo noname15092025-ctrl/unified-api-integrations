@@ -926,6 +926,16 @@ details.sch > summary::-webkit-details-marker { display: none; }
       '</tbody></table></section>';
   }
 
+  function requestTimeTool() {
+    return '<section class="tool-box" style="margin-top:22px"><h2 class="sec">Утилита: время запроса от B2B</h2>' +
+      '<div class="file-download-box"><div class="file-download-info"><span>Файл: <code>request_time.exe</code> · Windows, 7,5 МБ</span></div>' +
+      '<a class="file-download" href="tools/request_time.exe" download="request_time.exe">Скачать .exe</a></div>' +
+      '<div class="md"><p>Это программа, по которой можно узнать время запроса от B2B, если они прислали полные логи с целым заголовком <code>Authorization: Bearer &lt;token&gt;</code>.</p>' +
+      '<ol><li>Скопируйте из лога токен целиком — без слова <code>Bearer</code>.</li>' +
+      '<li>Запустите <code>request_time.exe</code> и вставьте токен в строку «Сюда вставь токен».</li>' +
+      '<li>Программа покажет время запроса в UTC0. Время считается из поля <code>exp</code> токена минус 5 часов; подпись токена не проверяется, интернет не нужен.</li></ol></div></section>';
+  }
+
   function apiOverview(api) {
     var h = '<h1 class="page">' + esc(api.title) + "</h1>";
     h += '<p class="lead">' + esc(api.subtitle) + "</p>";
@@ -953,6 +963,7 @@ details.sch > summary::-webkit-details-marker { display: none; }
     if (api.key === "b2b" || api.key === "aggr") h += winfinityInfo();
     if (api.appendix) h += '<div class="md api-appendix">' + md(api.appendix) + "</div>";
     if (["broit", "mancala-fs", "round-check", "bet-history"].indexOf(api.key) < 0) h += '<div class="note jwt-lifetime"><strong>Срок действия JWT-токена:</strong> примерно 2 часа.</div>';
+    if (["b2b", "aggr", "mancala"].indexOf(api.key) >= 0) h += requestTimeTool();
     return h;
   }
 
@@ -1439,6 +1450,7 @@ details.sch > summary::-webkit-details-marker { display: none; }
     if(route==="#/mancala"){Array.prototype.forEach.call(mainEl.querySelectorAll(".mancala-info"),function(info){info.remove();});Array.prototype.forEach.call(mainEl.querySelectorAll("h1,h2,h3,h4"),function(heading){if(/Информация для Mancala/i.test(heading.textContent)){var block=heading.closest("section,article,.note,.card")||heading.parentElement;if(block)block.remove();}});mainEl.insertAdjacentHTML("beforeend",mancalaInfo());}
     if((route==="#/b2b"||route==="#/aggr")&&!mainEl.querySelector(".winfinity-info"))mainEl.insertAdjacentHTML("beforeend",winfinityInfo());
     if(/^#\/(b2b|aggr|mancala)$/.test(route)){Array.prototype.forEach.call(mainEl.querySelectorAll(".mancala-info p"),function(p){if(/Срок действия JWT-токена/i.test(p.textContent))p.remove();});if(!mainEl.querySelector(".jwt-lifetime"))mainEl.insertAdjacentHTML("beforeend",'<div class="note jwt-lifetime"><strong>Срок действия JWT-токена:</strong> примерно 2 часа.</div>');}
+    if(/^#\/(b2b|aggr|mancala)$/.test(route)){var oldTool=mainEl.querySelector(".tool-box");if(oldTool)oldTool.remove();mainEl.insertAdjacentHTML("beforeend",requestTimeTool());}
     var doc=DATA.docs.filter(function(item){return route==="#/"+item.key;})[0];
     if(doc){Array.prototype.forEach.call(mainEl.querySelectorAll(".note"),function(note){if(/^Источник\s*:/i.test(note.textContent.trim()))note.remove();});Array.prototype.forEach.call(mainEl.querySelectorAll("p"),function(p){if(/^Текстовая (версия|справка)/i.test(p.textContent.trim()))p.remove();});Array.prototype.forEach.call(mainEl.querySelectorAll(".file-download-box"),function(box){box.remove();});var title=mainEl.querySelector("h1.page");if(title)title.insertAdjacentHTML("afterend",docDownload(doc));else mainEl.insertAdjacentHTML("afterbegin",docDownload(doc));}
     if(/^#\/faq\/support(?:\/1331691558)?$/.test(route)){var cat=DATA.faq.categories.filter(function(item){return item.id==="support";})[0];var block=cat&&cat.blocks.filter(function(item){return item.page==="1331691558";})[0];var pair=block&&block.pairs.filter(function(item){return item.q.indexOf("Дополнительные вопросы по автоматическому рефанду")===0;})[0];if(pair&&!mainEl.textContent.includes("Дополнительные вопросы по автоматическому рефанду")){var idx=block.pairs.indexOf(pair);var qa=qaItem(cat,block,pair,idx);var last=mainEl.querySelector("#qa-"+block.page+"-"+(idx-1));if(last)last.insertAdjacentHTML("afterend",qa);else mainEl.insertAdjacentHTML("beforeend",qa);}}
