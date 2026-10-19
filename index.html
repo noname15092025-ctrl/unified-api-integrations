@@ -949,6 +949,7 @@ details.sch > summary::-webkit-details-marker { display: none; }
     if (op.summary) h += '<div class="op-sub">' + esc(op.summary) + "</div>";
     h += '<div class="op-sub op-id">operationId: ' + esc(op.opId) + "</div></div>";
 
+    if (api.source) h += docDownload(api);
     if (op.description) h += '<div class="md">' + md(op.description) + "</div>";
 
     var headers = (op.params || []).filter(function (p) { return p.in === "header"; });
