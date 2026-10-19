@@ -121,11 +121,12 @@ a:hover { text-decoration: underline; }
   font-size: 11.5px; font-weight: 700; letter-spacing: .09em; color: #fff;
   background: linear-gradient(135deg, #3b7bff 0%, var(--accent) 55%, #2358c9 100%);
   box-shadow: 0 1px 2px rgba(35,88,201,.25), 0 4px 12px rgba(47,111,237,.22);
-  transition: transform .15s ease, box-shadow .15s ease, filter .15s ease;
+  transition: transform .15s ease, box-shadow .15s ease;
 }
 .home-tab svg { width: 14px; height: 14px; flex: none; }
-.home-tab:hover { color: #fff; transform: translateY(-1px); filter: brightness(1.06);
-  box-shadow: 0 2px 4px rgba(35,88,201,.28), 0 8px 18px rgba(47,111,237,.28); }
+.home-tab:hover { color: #fff; background: linear-gradient(135deg, #3b7bff 0%, var(--accent) 55%, #2358c9 100%);
+  transform: translateY(-1px) scale(1.03);
+  box-shadow: 0 2px 3px rgba(35,88,201,.25), 0 5px 12px rgba(47,111,237,.22); }
 .home-tab:active { transform: translateY(0); box-shadow: 0 1px 2px rgba(35,88,201,.3); }
 .home-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .tab .cnt {
