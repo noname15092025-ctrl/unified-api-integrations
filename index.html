@@ -455,9 +455,9 @@ details.sch > summary::-webkit-details-marker { display: none; }
 
 /* ---------------- FAQ / FAQ TG: one card format ---------------- */
 .qa .ans-plain { white-space: pre-wrap; overflow-wrap: anywhere; }
-.qa .qa-actions { display: flex; justify-content: flex-end; margin-top: 10px; }
-.qa .qa-copy { position: static; }
-body.editing .qa-actions { display: none; }
+.qa > summary .qa-q { flex: 1 1 auto; min-width: 0; }
+.qa > summary .qa-copy { position: static; flex: none; align-self: flex-start; font-weight: 500; }
+body.editing .qa-copy { display: none; }
 </style>
 </head>
 <body>
@@ -1449,11 +1449,19 @@ The player immediately received their funds back.`},
     return any ? h : h + '<div class="empty">Ничего не найдено. Очистите фильтр или выберите другую тему.</div>';
   }
 
-  /* every Q&A card (FAQ and FAQ TG) gets the same copy button under the answer */
+  /* every Q&A card (FAQ and FAQ TG) gets the same copy button in its question row, visible while collapsed */
   function decorateQa() {
-    Array.prototype.forEach.call(mainEl.querySelectorAll("details.qa > .ans"), function (ans) {
-      if (ans.querySelector(".qa-actions")) return;
-      ans.insertAdjacentHTML("beforeend", '<div class="qa-actions"><button class="copy qa-copy" type="button">Копировать</button></div>');
+    Array.prototype.forEach.call(mainEl.querySelectorAll("details.qa"), function (qa) {
+      Array.prototype.forEach.call(qa.querySelectorAll(".ans > .qa-actions"), function (x) { x.remove(); });
+      var sum = qa.querySelector(":scope > summary");
+      if (!sum || sum.querySelector(".qa-copy") || !qa.querySelector(":scope > .ans")) return;
+      if (!sum.querySelector(".qa-q")) {
+        var q = document.createElement("span");
+        q.className = "qa-q";
+        while (sum.firstChild) q.appendChild(sum.firstChild);
+        sum.appendChild(q);
+      }
+      sum.insertAdjacentHTML("beforeend", '<button class="copy qa-copy" type="button" title="Копировать ответ">Копировать</button>');
     });
   }
   function qaAnswerText(ans) {
@@ -1567,8 +1575,9 @@ The player immediately received their funds back.`},
     mainEl.querySelectorAll(".qa-copy").forEach(function (b) {
       b.addEventListener("click", function (ev) {
         ev.preventDefault();
+        ev.stopPropagation();
         if (editMode) return;
-        copy(qaAnswerText(b.closest(".ans")), b);
+        copy(qaAnswerText(b.closest("details.qa").querySelector(":scope > .ans")), b);
       });
     });
     mainEl.querySelectorAll("[data-schema]").forEach(function (a) {
