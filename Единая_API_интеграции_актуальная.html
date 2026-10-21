@@ -459,6 +459,9 @@ details.sch > summary::-webkit-details-marker { display: none; }
 /* ---------------- FAQ / FAQ TG: one card format ---------------- */
 .qa .ans-plain { white-space: pre-wrap; overflow-wrap: anywhere; }
 .qa > summary > .qa-q { flex: 1 1 auto; min-width: 0; }
+.qa .qa-actions { gap: 8px; }
+.qa .qa-link { position: static; }
+.qa.qa-target { box-shadow: 0 0 0 2px var(--accent); }
 .qa .qa-actions { display: flex; justify-content: flex-end; margin-top: 10px; }
 .qa .qa-copy { position: static; }
 body.editing .qa-actions { display: none; }
@@ -1073,10 +1076,14 @@ If new parameters or features appear in the API, we will let you know.`},
     }
     if (DATA.docs && DATA.docs.some(function(d){return d.key===p[0];})) { S.tab=p[0]; S.doc=p[1]||null; return; }
     if (p[0] === "faq") {
-      S.tab = "faq"; S.cat = p[1] || null; S.page = p[2] || null; return;
+      S.tab = "faq"; S.cat = p[1] || null; S.page = p[2] || null;
+      if (p[2] && /^\d+$/.test(p[3] || "")) { S.openQa = p[2] + "#" + p[3]; S.scrollQa = true; }
+      return;
     }
     if (p[0] === "faq-tg") {
-      S.tab = "faq-tg"; S.cat = TG_TOPICS[p[1]] ? p[1] : null; return;
+      S.tab = "faq-tg"; S.cat = TG_TOPICS[p[1]] ? p[1] : null;
+      if (/^\d+$/.test(p[2] || "")) { S.openTg = +p[2]; S.scrollQa = true; }
+      return;
     }
     if (p[0] === "ref") {
       S.tab = "faq"; S.ref = p[1] || null; return;
@@ -1502,9 +1509,24 @@ If new parameters or features appear in the API, we will let you know.`},
     });
     Array.prototype.forEach.call(mainEl.querySelectorAll("details.qa > .ans"), function (ans) {
       if (ans.querySelector(".qa-actions")) return;
-      ans.insertAdjacentHTML("beforeend", '<div class="qa-actions"><button class="copy qa-copy" type="button">Копировать</button></div>');
+      var link = qaLink(ans.parentElement);
+      ans.insertAdjacentHTML("beforeend", '<div class="qa-actions">' +
+        (link ? '<button class="copy qa-link" type="button" data-link="' + attr(link) + '" title="Скопировать ссылку на этот вопрос">Ссылка</button>' : "") +
+        '<button class="copy qa-copy" type="button">Копировать</button></div>');
     });
   }
+
+  /* permalink of one Q&A card: #/faq/<cat>/<page>/<n> or #/faq-tg/<topic>/<n> */
+  function qaLink(qa) {
+    var m = /^tg-(\d+)$/.exec(qa.id || "");
+    if (m && TG_FAQ[+m[1]]) return "#/faq-tg/" + TG_FAQ[+m[1]].t + "/" + m[1];
+    m = /^qa-(.+)-(\d+)$/.exec(qa.id || "");
+    if (!m) return "";
+    var cat = null;
+    FAQ.categories.forEach(function (c) { c.blocks.forEach(function (b) { if (b.page === m[1]) cat = cat || c.id; }); });
+    return cat ? "#/faq/" + cat + "/" + m[1] + "/" + m[2] : "";
+  }
+  function absLink(hash) { return location.href.split("#")[0].split("?")[0] + hash; }
   /* hover translation: English blocks that have a Russian version in PORTAL_RU get a tooltip */
   var RU = window.PORTAL_RU || {};
   /* a text block = nearest block-level ancestor of a visible text node; its key = its text with blocks/<br> as spaces */
@@ -1686,6 +1708,15 @@ If new parameters or features appear in the API, we will let you know.`},
     addWbr();
     hideRuTip();
     bindDynamic();
+    if (S.scrollQa) {
+      S.scrollQa = false;
+      setTimeout(function () {
+        var target = mainEl.querySelector("details.qa[open]");
+        if (!target) return;
+        target.classList.add("qa-target");
+        target.scrollIntoView({ block: "center" });
+      }, 60);
+    }
     if (S.search && searchInput) {
       searchInput.value = S.search;
       S.search = null;
@@ -1739,6 +1770,13 @@ If new parameters or features appear in the API, we will let you know.`},
       b.addEventListener("click", function () {
         var t = document.getElementById(b.dataset.copy);
         if (t) copy(t.textContent, b);
+      });
+    });
+    mainEl.querySelectorAll(".qa-link").forEach(function (b) {
+      b.addEventListener("click", function (ev) {
+        ev.preventDefault();
+        if (editMode) return;
+        copy(absLink(b.dataset.link), b);
       });
     });
     mainEl.querySelectorAll(".qa-copy").forEach(function (b) {
