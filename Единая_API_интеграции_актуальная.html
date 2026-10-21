@@ -453,11 +453,11 @@ details.sch > summary::-webkit-details-marker { display: none; }
   .main > .tabs .home-tab { border-bottom: 0; margin: 0; }
 }
 
-/* ---------------- FAQ TG ---------------- */
-.tg-qa .ans { white-space: pre-wrap; overflow-wrap: anywhere; }
-.tg-qa .tg-actions { display: flex; justify-content: flex-end; margin-top: 10px; }
-.tg-qa .tg-copy { position: static; }
-.tg-tag { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 20px; background: var(--accent-soft); color: var(--accent); margin-left: auto; flex: none; }
+/* ---------------- FAQ / FAQ TG: one card format ---------------- */
+.qa .ans-plain { white-space: pre-wrap; overflow-wrap: anywhere; }
+.qa .qa-actions { display: flex; justify-content: flex-end; margin-top: 10px; }
+.qa .qa-copy { position: static; }
+body.editing .qa-actions { display: none; }
 </style>
 </head>
 <body>
@@ -1428,22 +1428,42 @@ The player immediately received their funds back.`},
 
   function tgView(filter) {
     var f = (filter || "").toLowerCase();
-    var title = S.cat ? TG_TOPICS[S.cat] : "FAQ TG";
-    var h = '<div class="crumbs"><a href="#/faq-tg">FAQ TG</a>' + (S.cat ? " / " + esc(title) : "") + "</div>";
-    h += '<h1 class="page">' + esc(title) + "</h1>";
-    h += '<p class="lead">Вопросы партнёров и ответы @supphelper1 из рабочих чатов Telegram. Кнопка «Копировать» копирует готовый ответ.</p>';
-    var items = [];
-    TG_FAQ.forEach(function (it, i) { if ((!S.cat || it.t === S.cat) && tgMatches(it, f)) items.push([it, i]); });
-    if (!items.length) return h + '<div class="empty">Ничего не найдено. Очистите фильтр или выберите другую тему.</div>';
-    items.forEach(function (p) {
-      var it = p[0], i = p[1];
-      h += '<details class="qa tg-qa" id="tg-' + i + '"' + (S.openTg === i ? " open" : "") + "><summary><span>" + esc(it.q) + "</span>" +
-        (S.cat ? "" : '<span class="tg-tag">' + esc(TG_TOPICS[it.t] || "") + "</span>") + "</summary>" +
-        '<div class="ans"><div id="tg-a-' + i + '">' + esc(it.a) + "</div>" +
-        '<div class="tg-actions"><button class="copy tg-copy" type="button" data-copy="tg-a-' + i + '">Копировать</button></div></div></details>';
+    var h = '<div class="crumbs"><a href="#/faq-tg">FAQ TG</a>' + (S.cat ? " / " + esc(TG_TOPICS[S.cat]) : "") + "</div>";
+    h += '<h1 class="cat-head">' + esc(S.cat ? TG_TOPICS[S.cat] : "FAQ TG") + '</h1><p class="cat-note">Вопросы партнёров и ответы @supphelper1 из рабочих чатов Telegram.</p>';
+    var any = false;
+    Object.keys(TG_TOPICS).forEach(function (k) {
+      if (S.cat && S.cat !== k) return;
+      var items = [];
+      TG_FAQ.forEach(function (it, i) { if (it.t === k && tgMatches(it, f)) items.push(i); });
+      if (!items.length) return;
+      any = true;
+      h += '<div class="src-head"><h3>' + esc(TG_TOPICS[k]) + '</h3><span class="sp">TG</span>' +
+        '<span style="color:var(--muted);font-size:12.5px">' + items.length + " вопр.</span></div>";
+      items.forEach(function (i) {
+        var it = TG_FAQ[i];
+        h += '<details class="qa"' + (S.openTg === i ? " open" : "") + ' id="tg-' + i + '"><summary>' + esc(it.q) + "</summary>" +
+          '<div class="ans"><div class="ans-plain">' + esc(it.a) + "</div></div></details>";
+      });
     });
     S.openTg = null;
-    return h;
+    return any ? h : h + '<div class="empty">Ничего не найдено. Очистите фильтр или выберите другую тему.</div>';
+  }
+
+  /* every Q&A card (FAQ and FAQ TG) gets the same copy button under the answer */
+  function decorateQa() {
+    Array.prototype.forEach.call(mainEl.querySelectorAll("details.qa > .ans"), function (ans) {
+      if (ans.querySelector(".qa-actions")) return;
+      ans.insertAdjacentHTML("beforeend", '<div class="qa-actions"><button class="copy qa-copy" type="button">Копировать</button></div>');
+    });
+  }
+  function qaAnswerText(ans) {
+    var c = ans.cloneNode(true);
+    Array.prototype.forEach.call(c.querySelectorAll(".qa-actions, .extra"), function (x) { x.remove(); });
+    c.style.cssText = "position:absolute;left:-9999px;white-space:pre-wrap";
+    document.body.appendChild(c);
+    var t = c.innerText.trim();
+    c.remove();
+    return t;
   }
 
   /* ---------------------------------------------------------- main render */
@@ -1487,6 +1507,7 @@ The player immediately received their funds back.`},
       }
     }
     applyEdit();
+    decorateQa();
     bindDynamic();
     if (S.search && searchInput) {
       searchInput.value = S.search;
@@ -1541,6 +1562,13 @@ The player immediately received their funds back.`},
       b.addEventListener("click", function () {
         var t = document.getElementById(b.dataset.copy);
         if (t) copy(t.textContent, b);
+      });
+    });
+    mainEl.querySelectorAll(".qa-copy").forEach(function (b) {
+      b.addEventListener("click", function (ev) {
+        ev.preventDefault();
+        if (editMode) return;
+        copy(qaAnswerText(b.closest(".ans")), b);
       });
     });
     mainEl.querySelectorAll("[data-schema]").forEach(function (a) {
