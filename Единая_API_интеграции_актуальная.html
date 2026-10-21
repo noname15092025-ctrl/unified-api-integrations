@@ -436,7 +436,10 @@ details.sch > summary::-webkit-details-marker { display: none; }
 .main > .tabs .tab.active { background: var(--accent-soft); color: var(--accent); }
 .main > .tabs .tab .cnt { font-size: 10.5px; flex: none; }
 .main > .tabs .home-tab { justify-content: flex-start; margin: 0 0 6px; padding: 8px 10px; border-bottom: 1px solid var(--line-2); border-radius: 7px 7px 0 0; }
-.main > .tabs .search-tab, .main > .tabs .sticky-search { display: none !important; }
+.main > .tabs { z-index: 60; }
+.main > .tabs .search-tab { display: none; position: absolute; top: 11px; right: 10px; margin: 0; z-index: 2; }
+.main > .tabs.show-search .search-tab { display: inline-flex; }
+.main > .tabs .sticky-search { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); }
 .side { top: 16px; max-height: calc(100vh - 32px); }
 @media (max-width: 1180px) {
   .main { grid-template-columns: 190px minmax(0, 1fr); }
@@ -447,14 +450,15 @@ details.sch > summary::-webkit-details-marker { display: none; }
 @media (max-width: 980px) {
   .main { grid-template-columns: 1fr; }
   .main > .side, .main > .content { grid-column: auto; }
-  .main > .tabs { position: static; max-height: none; grid-row: auto; }
-  .main > .tabs .tabs-inner { flex-direction: row; flex-wrap: wrap; }
+  .main > .tabs { position: relative; top: auto; max-height: none; grid-row: auto; }
+  .main > .tabs .tabs-inner { flex-direction: row; flex-wrap: wrap; justify-content: flex-start; gap: 4px; }
   .main > .tabs .tab { width: auto; }
   .main > .tabs .home-tab { border-bottom: 0; margin: 0; }
 }
 
 /* ---------------- FAQ / FAQ TG: one card format ---------------- */
 .qa .ans-plain { white-space: pre-wrap; overflow-wrap: anywhere; }
+.qa > summary > .qa-q { flex: 1 1 auto; min-width: 0; }
 .qa .qa-actions { display: flex; justify-content: flex-end; margin-top: 10px; }
 .qa .qa-copy { position: static; }
 body.editing .qa-actions { display: none; }
@@ -470,6 +474,39 @@ body.editing .qa-actions { display: none; }
 }
 .ru-tip[hidden] { display: none; }
 body.editing .has-ru { text-decoration: none; }
+
+/* ---------------- word wrapping ---------------- */
+/* prose: hyphenate by the block's language and never let a long token stick out of its box */
+.content, .side, .ru-tip { overflow-wrap: break-word; -webkit-hyphens: auto; hyphens: auto; }
+.content a { overflow-wrap: anywhere; }
+.content th { -webkit-hyphens: manual; hyphens: manual; overflow-wrap: normal; }
+/* code-like text: no hyphens; paths break at / _ - . (see addWbr), mid-word only as a last resort */
+.content pre, .content code, .content a, .op-link .p, .op-path, .md-endpoint-path, .schema .name, .schema .type, .schema .enum, .m, .badge, .tab, .op-id {
+  -webkit-hyphens: manual; hyphens: manual;
+}
+.op-link .p, .op-path, .md-endpoint-path { word-break: normal; overflow-wrap: anywhere; }
+.op-link .s { word-break: normal; overflow-wrap: break-word; -webkit-hyphens: auto; hyphens: auto; }
+.group-note td:first-child { white-space: normal; }
+/* phones: wide tables scroll sideways inside themselves instead of pushing the page wider */
+@media (max-width: 700px) {
+  .content { padding: 16px 14px 32px; }
+  .content table { display: block; max-width: 100%; overflow-x: auto; }
+}
+
+/* ---------------- back to top ---------------- */
+.to-top {
+  position: fixed; right: 24px; bottom: 24px; z-index: 80;
+  width: 46px; height: 46px; border-radius: 50%; border: 0; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--accent); color: #fff; box-shadow: 0 6px 18px rgba(16, 24, 40, .25);
+  transition: transform .15s ease, background .15s ease;
+}
+.to-top svg { width: 22px; height: 22px; }
+.to-top:hover { transform: translateY(-2px); background: #2560d6; }
+.to-top:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+.to-top[hidden] { display: none; }
+@media (max-width: 640px) { .to-top { right: 16px; bottom: 16px; width: 42px; height: 42px; } }
+@media (prefers-reduced-motion: reduce) { .to-top { transition: none; } }
 </style>
 </head>
 <body>
@@ -1467,6 +1504,14 @@ The player immediately received their funds back.`},
 
   /* every Q&A card (FAQ and FAQ TG) gets the same copy button under the answer */
   function decorateQa() {
+    /* summary is a flex row: keep the whole question (text + inline code) in one wrapping item */
+    Array.prototype.forEach.call(mainEl.querySelectorAll("details.qa > summary"), function (sum) {
+      if (sum.querySelector(":scope > .qa-q")) return;
+      var q = document.createElement("span");
+      q.className = "qa-q";
+      while (sum.firstChild) q.appendChild(sum.firstChild);
+      sum.appendChild(q);
+    });
     Array.prototype.forEach.call(mainEl.querySelectorAll("details.qa > .ans"), function (ans) {
       if (ans.querySelector(".qa-actions")) return;
       ans.insertAdjacentHTML("beforeend", '<div class="qa-actions"><button class="copy qa-copy" type="button">Копировать</button></div>');
@@ -1503,9 +1548,61 @@ The player immediately received their funds back.`},
         if (!b || b === root || seen.indexOf(b) >= 0) continue;
         seen.push(b);
         var ru = RU[ruText(b).replace(/\s+/g, " ").trim()];
-        if (ru) { b.setAttribute("data-ru", ru); b.classList.add("has-ru"); }
+        if (ru) { b.setAttribute("data-ru", ru); b.setAttribute("lang", "en"); b.classList.add("has-ru"); }
       }
     });
+  }
+
+  /* let paths and URLs wrap after separators instead of in the middle of a word */
+  function wbrText(node) {
+    var parts = node.data.split(/(?<=[\/_\-.?&=#,])(?=.)/);
+    if (parts.length < 2) return;
+    var frag = document.createDocumentFragment();
+    parts.forEach(function (s, i) { frag.appendChild(document.createTextNode(s)); if (i < parts.length - 1) frag.appendChild(document.createElement("wbr")); });
+    node.parentNode.replaceChild(frag, node);
+  }
+  function addWbr() {
+    var direct = sideEl.querySelectorAll(".op-link .p, .op-path, .md-endpoint-path");
+    Array.prototype.forEach.call(direct, function (el) {
+      if (el.dataset.wbr) return;
+      el.dataset.wbr = "1";
+      Array.prototype.slice.call(el.childNodes).forEach(function (n) { if (n.nodeType === 3) wbrText(n); });
+    });
+    Array.prototype.forEach.call(mainEl.querySelectorAll(".op-path, .md-endpoint-path, a, td code, .kv .v code"), function (el) {
+      if (el.dataset.wbr || (el.tagName === "A" && !/^(https?:|\/)/.test(el.textContent.trim()))) return;
+      el.dataset.wbr = "1";
+      var w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT), list = [], n;
+      while ((n = w.nextNode())) list.push(n);
+      list.forEach(wbrText);
+    });
+    /* long space-less runs in table cells, e.g. "/bet,/win,/promo,..." */
+    Array.prototype.forEach.call(mainEl.querySelectorAll("td"), function (td) {
+      if (td.dataset.wbr) return;
+      td.dataset.wbr = "1";
+      var w = document.createTreeWalker(td, NodeFilter.SHOW_TEXT), list = [], n;
+      while ((n = w.nextNode())) if (/\S{25,}/.test(n.data) && !n.parentElement.closest("pre,a,[data-wbr='1']:not(td)")) list.push(n);
+      list.forEach(wbrText);
+    });
+  }
+
+  /* back-to-top button, bottom right */
+  function initToTop() {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "to-top";
+    b.hidden = true;
+    b.setAttribute("aria-label", "Наверх");
+    b.title = "Наверх";
+    b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>';
+    b.addEventListener("click", function () {
+      var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
+      Array.prototype.forEach.call(document.querySelectorAll(".side, .main > .tabs"), function (el) { el.scrollTop = 0; });
+    });
+    document.body.appendChild(b);
+    function update() { b.hidden = window.scrollY < 400; }
+    window.addEventListener("scroll", update, { passive: true });
+    update();
   }
   var ruTip = null;
   function showRuTip(e) {
@@ -1598,6 +1695,7 @@ The player immediately received their funds back.`},
     applyEdit();
     decorateQa();
     markTranslations();
+    addWbr();
     hideRuTip();
     bindDynamic();
     if (S.search && searchInput) {
@@ -1760,7 +1858,16 @@ The player immediately received their funds back.`},
 
   function initTabFollowScroll() {
     var bar = document.querySelector(".tabs");
-    if (!bar || bar.closest(".main")) return;
+    if (!bar) return;
+    if (bar.closest(".main")) {
+      /* left menu: show the black magnifier once the header search has scrolled out of view */
+      var top = document.querySelector(".top");
+      var sync = function () { bar.classList.toggle("show-search", window.scrollY > (top ? top.offsetHeight : 60)); };
+      window.addEventListener("scroll", sync, { passive: true });
+      window.addEventListener("resize", sync);
+      sync();
+      return;
+    }
     var spacer = document.createElement("div");
     spacer.className = "tabs-placeholder";
     var startY = bar.getBoundingClientRect().top + window.scrollY;
@@ -1820,7 +1927,7 @@ The player immediately received their funds back.`},
     });
     document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeStickySearch(); });
     var bar = document.querySelector(".tabs");
-    new MutationObserver(function () { if (!bar.classList.contains("is-fixed")) closeStickySearch(); }).observe(bar, { attributes: true, attributeFilter: ["class"] });
+    new MutationObserver(function () { if (!bar.classList.contains("is-fixed") && !bar.classList.contains("show-search")) closeStickySearch(); }).observe(bar, { attributes: true, attributeFilter: ["class"] });
     resultsEl.addEventListener("click", function (e) { if (e.target.closest(".res")) setTimeout(closeStickySearch, 0); });
   }
 
@@ -1849,7 +1956,7 @@ The player immediately received their funds back.`},
   function initEditor(){var t=document.getElementById("edit-page"),b=document.getElementById("save-page"),d=document.getElementById("download-portal"),st=document.getElementById("edit-status");
     t.addEventListener("click",function(){editMode=!editMode;mainEl.contentEditable=editMode?"true":"false";document.body.classList.toggle("editing",editMode);t.textContent=editMode?"Завершить редактирование":"Редактировать";b.disabled=!editMode;});
     mainEl.addEventListener("input",function(){if(editMode)st.textContent="Есть несохранённые изменения. Нажмите «Сохранить» или скачайте HTML.";});b.addEventListener("click",saveEdit);
-    d.addEventListener("click",function(){saveEdit();var c=document.documentElement.cloneNode(true);c.querySelector("#portal-user-edits").textContent=JSON.stringify(EDITS).replace(/</g,"\\u003c");c.querySelector("#content").removeAttribute("contenteditable");c.querySelector("body").classList.remove("editing");var blob=new Blob(["<!doctype html>\n"+c.outerHTML],{type:"text/html;charset=utf-8"}),u=URL.createObjectURL(blob),a=document.createElement("a");a.href=u;a.download="Единая_API_интеграции_актуальная.html";document.body.append(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(u);},1000);});}
+    d.addEventListener("click",function(){saveEdit();var c=document.documentElement.cloneNode(true);c.querySelector("#portal-user-edits").textContent=JSON.stringify(EDITS).replace(/</g,"\\u003c");c.querySelector("#content").removeAttribute("contenteditable");c.querySelector("body").classList.remove("editing");Array.prototype.forEach.call(c.querySelectorAll(".to-top,.ru-tip"),function(x){x.remove();});var blob=new Blob(["<!doctype html>\n"+c.outerHTML],{type:"text/html;charset=utf-8"}),u=URL.createObjectURL(blob),a=document.createElement("a");a.href=u;a.download="Единая_API_интеграции_актуальная.html";document.body.append(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(u);},1000);});}
 
   function init() {
     mainEl = document.getElementById("content");
@@ -1859,6 +1966,7 @@ The player immediately received their funds back.`},
     initTabFollowScroll();
     initStickySearch();
     initRuTips();
+    initToTop();
 
     document.querySelectorAll(".tab").forEach(function (t) {
       t.addEventListener("click", function () {
@@ -1923,7 +2031,7 @@ The player immediately received their funds back.`},
     });
     document.addEventListener("keydown", function (e) {
       if (e.key === "Escape") { var preview = document.querySelector(".image-lightbox"); if (preview) preview.remove(); }
-      if (e.key === "/" && document.activeElement.tagName !== "INPUT") { e.preventDefault(); if (document.querySelector(".tabs.is-fixed")) openStickySearch(); else searchInput.focus(); }
+      if (e.key === "/" && document.activeElement.tagName !== "INPUT") { e.preventDefault(); if (document.querySelector(".tabs.is-fixed, .tabs.show-search")) openStickySearch(); else searchInput.focus(); }
     });
 
     window.addEventListener("hashchange", function () { parseHash(); render(); revealOpen(); });
