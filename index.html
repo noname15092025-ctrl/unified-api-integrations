@@ -567,7 +567,7 @@ window.PORTAL_RU={"Interaction between the B2B Company (client) platform (site) 
 </script>
 <script>
 /* FAQ TG: вопросы партнёров и ответы @supphelper1 из рабочих чатов Telegram */
-window.TG_TOPICS={api:"API и коллбэки",tx:"Ставки и рефанды",access:"Доступы и IP",cur:"Валюты и гео",rounds:"Раунды и отчёты",bonus:"Бонусы и фриспины",cases:"Разборы кейсов"};
+window.TG_TOPICS={api:"API и коллбэки",tx:"Ставки и рефанды",access:"Доступы и IP",cur:"Валюты и гео",rounds:"Раунды и отчёты",bonus:"Бонусы и фриспины"};
 window.TG_FAQ=[
 {t:"api",q:`Where is the API documentation / API URL?`,a:`Winfinity (stage): https://transaction.uat.agg.bet/b2b-swagger/docs
 Mancala (stage): https://transaction.uat.softgga.dev/ — documentation: https://transaction.uat.softgga.dev/b2b-swagger/docs`},
@@ -698,18 +698,6 @@ If new parameters or features appear in the API, we will let you know.`},
 {t:"bonus",q:`extended_campaign returns 500 with session_spin_amount_trigger`,a:`At least one trigger needs to be present in the trigger object. 'first_game_launch_trigger' is a required parameter. If you send only first_game_launch_trigger = false, you will get an error — this is intentional. Use the parameter set to true in your request.`},
 {t:"bonus",q:`Если у игрока несколько FS-кампаний и одну отменить — какая будет следующей?`,a:`Если у игрока есть 3 ФС кампании и одну отменить, то следующей будет та, которая была создана раньше по времени.`},
 
-{t:"cases",q:`Transaction is pending on our site — PayIn timeout`,a:`The PayIn request was canceled due to a "Timeout of 4 seconds elapsing" error, which means that at the time of the pay-in request, no response was received from your side.
-
-The player immediately received their funds back.`},
-{t:"cases",q:`Transaction is pending on our site — Bad Gateway / internal error`,a:`A request to end the round was sent, but a response was received with the error "Bad Gateway" from your side. This may be the reason why the round on your side is still displayed as pending. Kindly investigate the issue on your end.`},
-{t:"cases",q:`Payout pending — was it retried?`,a:`The player's PayOut request was cancelled due to a "Gateway Timeout" error. A retry was initiated and it was successful on the first try - the player has received their winnings for this game round.`},
-{t:"cases",q:`Players at a table can't bet`,a:`We have completed a review on our side and did not identify any issues. Players at this table are encountering the message "current user is blocked." Please review this on your end.`},
-{t:"cases",q:`A bet is missing — the round was cancelled`,a:`During the game round a human error occurred, so the round was cancelled and deemed invalid. The player's bet was disabled and no funds were taken from them.`},
-{t:"cases",q:`Please check this player for abnormal betting / fraud`,a:`The requested gaming session was investigated. After the necessary checks, no irregularities were observed in the client's gaming activity. The winnings are legitimate and correct. Fraud attempts were not observed.`},
-{t:"cases",q:`Игрок: выигрыш на 35 Black не засчитан, раунд отменён`,a:`Игровой раунд начался до закрытия приёма ставок. В результате выигрышный номер был признан недействительным, и раунд был отменён. Первоначальные ставки были возвращены игроку.`},
-{t:"cases",q:`Игрок: после сбоя рулетки выпал другой номер`,a:`После игрового раунда произошла техническая ошибка. Пока её исправляли, шарик оставался на прежнем номере. Затем, согласно нашим процедурам, был произведён повторный спин — его результат является действительным выигрышным номером для раунда.`},
-{t:"cases",q:`Игрок: в блэкджеке дилер выдал карту, хотя было 20 очков`,a:`Игрок получил начальный счёт 20 и выбрал вариант предварительного решения «Hit». Это привело к проигрышу с результатом «Too Many». Игроку были представлены варианты решения, и он сам их выбрал; отменить предварительное решение он не пытался. Нарушений не обнаружено.`},
-{t:"cases",q:`Игрок: пропали фриспины, когда отложил телефон`,a:`Бонусная игра активировалась, и пока игрок отложил телефон, игра продолжила доигрывать бонусный раунд. Ошибок не зафиксировано, выигрыш зачислен на баланс игрока. Прикладываем реплей раунда.`},
 ];
 </script>
 <script>
