@@ -1486,11 +1486,14 @@ If new parameters or features appear in the API, we will let you know.`},
     if (!list.length) return "";
     var link = function (href, label) { return '<a href="' + attr(href) + '" target="_blank" rel="noopener">' + esc(label) + "</a>"; };
     return '<div class="extra tg-src"><b>Источник в Telegram:</b> ' + list.map(function (s) {
-      var sg = /^-100\d+$/.test(s.c), base = "https://t.me/c/" + s.c.slice(4) + "/";
+      var sg = /^-100\d+$/.test(s.c), ch = s.c.slice(4);
+      /* Telegram Web jumps straight to the message via a privatepost deep link; t.me opens the desktop/mobile app */
+      var web = function (n) { return "https://web.telegram.org/a/#?tgaddr=" + encodeURIComponent("tg://privatepost?channel=" + ch + "&post=" + n); };
       var parts = [esc(s.t)];
       if (sg) {
-        if (s.q) parts.push(link(base + s.q, "вопрос"));
-        parts.push(link(base + s.a, "ответ"));
+        if (s.q) parts.push(link(web(s.q), "вопрос"));
+        parts.push(link(web(s.a), "ответ"));
+        parts.push(link("https://t.me/c/" + ch + "/" + s.a, "ответ в приложении"));
       } else {
         parts.push(link("https://web.telegram.org/a/#" + s.c, "открыть чат"));
       }
