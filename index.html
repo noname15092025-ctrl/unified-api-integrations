@@ -462,8 +462,6 @@ details.sch > summary::-webkit-details-marker { display: none; }
 }
 
 /* ---------------- FAQ / FAQ TG: one card format ---------------- */
-.qa summary .sl-thread { margin-left: auto; flex: none; align-self: center; font-size: 12px; font-weight: 500; color: var(--muted); text-decoration: none; padding: 2px 8px; border: 1px solid var(--line, #dde3ee); border-radius: 6px; white-space: nowrap; }
-.qa summary .sl-thread:hover { color: #2f6fed; border-color: #2f6fed; }
 .qa .ans-plain { white-space: pre-wrap; overflow-wrap: anywhere; }
 .qa > summary > .qa-q { flex: 1 1 auto; min-width: 0; }
 .qa .qa-actions { gap: 8px; }
@@ -1671,8 +1669,7 @@ If new parameters or features appear in the API, we will let you know.`},
         var it = SL_FAQ[i];
         var src = '<div class="extra tg-src"><b>Источник в Slack:</b> ' + esc(SL_CH[it.ch] || it.ch) + " · " + esc(it.d.split("-").reverse().join(".")) +
           (it.u ? ' · <a href="' + attr(it.u) + '" target="_blank" rel="noopener">открыть тред</a>' : "") + "</div>";
-        h += '<details class="qa"' + (S.openSl === i ? " open" : "") + ' id="sl-' + i + '"><summary>' + esc(it.q) +
-          (it.u ? '<a class="sl-thread" href="' + attr(it.u) + '" target="_blank" rel="noopener" title="Открыть тред в Slack">тред ↗</a>' : "") + "</summary>" +
+        h += '<details class="qa"' + (S.openSl === i ? " open" : "") + ' id="sl-' + i + '"><summary>' + esc(it.q) + "</summary>" +
           '<div class="ans">' + md(it.a) + src + "</div></details>";
       });
     });
