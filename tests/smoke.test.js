@@ -717,6 +717,37 @@ async function searchTitles(page, q) {
     assert.ok(top !== null && top >= -5 && top < 220, "по ссылке раздел БО не открылся: " + top);
   });
 
+  await check("Содержание: поиск по разделам — по названию, по тексту раздела и на русском для английских терминов", async () => {
+    await go("#/doc-backoffice");
+    const vis = () => page.$$eval(".side [data-doc-section]", (e) => e.filter((x) => x.offsetParent !== null).map((x) => x.textContent));
+    const all = (await vis()).length;
+    assert.ok(await page.$("#doc-filter"), "нет поля поиска в содержании");
+    await page.fill("#doc-filter", "Fix transactions");
+    await page.waitForTimeout(150);
+    let v = await vis();
+    assert.ok(v.some((t) => /Ручное изменение статуса транзакций в БО/.test(t)) && v.length < all, v.length + "/" + all + ": " + v.join(" | "));
+    await page.fill("#doc-filter", "белый список");
+    await page.waitForTimeout(150);
+    v = await vis();
+    assert.ok(v.some((t) => /Whitelist IP/.test(t)), "русский запрос не нашёл Whitelist IP: " + v.join(" | "));
+    assert.strictEqual(await page.$eval("#doc-filter", (e) => e === document.activeElement), true, "фокус потерян");
+    await page.fill("#doc-filter", "zzzqqq");
+    await page.waitForTimeout(150);
+    assert.strictEqual((await vis()).length, 0);
+    assert.ok(await page.$eval(".side", (e) => /Ничего не найдено/.test(e.textContent)), "нет сообщения «Ничего не найдено»");
+    await page.fill("#doc-filter", "");
+    await page.waitForTimeout(150);
+    assert.strictEqual((await vis()).length, all, "после очистки не все разделы");
+    await page.fill("#doc-filter", "Whitelist IP");
+    await page.waitForTimeout(150);
+    await page.click(".side [data-doc-section]:visible");
+    await page.waitForTimeout(1200);
+    const top = await page.evaluate(() => [...document.querySelectorAll("#content h2")].find((x) => /Whitelist IP/.test(x.textContent)).getBoundingClientRect().top);
+    assert.ok(top >= -5 && top < 220, "клик по найденному разделу не прокрутил: " + top);
+    await go("#/home");
+    assert.ok(await page.$("#doc-filter"), "нет поиска в содержании на главной");
+  });
+
   await check("на сайте нет ошибок JavaScript", async () => {
     assert.deepStrictEqual(errors, []);
   });

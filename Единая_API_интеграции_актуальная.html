@@ -1612,10 +1612,11 @@ If new parameters or features appear in the API, we will let you know.`},
   }
 
   function renderSideDoc(doc) {
-    var h='<div class="grp"><button type="button"><span class="chev">▼</span>Содержание</button><div class="grp-items">';
+    var h='<div class="side-search"><input id="doc-filter" placeholder="Поиск по содержанию…" autocomplete="off"></div>';
+    h+='<div class="grp"><button type="button"><span class="chev">▼</span>Содержание</button><div class="grp-items">';
     h+='<button class="op-link active" data-doc-top="1"><span class="p">В начало</span></button>';
     docHeadings(doc).forEach(function(t,i){h+='<button class="op-link" data-doc-section="'+doc.key+'-section-'+i+'"><span class="p">'+esc(t)+'</span></button>';});
-    return h+'</div></div>';
+    return h+'<div class="empty doc-filter-empty" style="display:none">Ничего не найдено</div></div></div>';
   }
   /* file to download, shown at the top of a document or API page */
   function docDownload(doc) {
@@ -2045,6 +2046,30 @@ If new parameters or features appear in the API, we will let you know.`},
       b.addEventListener("click", function () { nav(b.dataset.nav); });
     });
     sideEl.querySelectorAll("[data-doc-section]").forEach(function(b){b.addEventListener("click",function(){var h=document.getElementById(b.dataset.docSection);if(h)scrollToStable(h);});});
+    /* contents search: hides sections whose title and text do not match; same word expansion (RU <-> EN) as the main search */
+    var df = document.getElementById("doc-filter");
+    if (df) {
+      var secText = null;
+      df.addEventListener("input", function () {
+        var btns = sideEl.querySelectorAll("[data-doc-section]");
+        if (!secText) {
+          secText = {};
+          Array.prototype.forEach.call(btns, function (b) {
+            var hd = document.getElementById(b.dataset.docSection), t = hd ? hd.textContent : b.textContent;
+            for (var n = hd && hd.nextElementSibling; n && !/^H[1-4]$/.test(n.tagName); n = n.nextElementSibling) t += " " + n.textContent;
+            secText[b.dataset.docSection] = t.toLowerCase();
+          });
+        }
+        var q = df.value.trim().toLowerCase(), exp = q ? q.split(/\s+/).map(function (tk) { return expandTok(tk, q); }) : [], shown = 0;
+        Array.prototype.forEach.call(btns, function (b) {
+          var t = secText[b.dataset.docSection] || "";
+          var ok = exp.every(function (alts) { return alts.some(function (a) { return t.indexOf(a) >= 0; }); });
+          b.style.display = ok ? "" : "none"; if (ok) shown++;
+        });
+        var top = sideEl.querySelector("[data-doc-top]"); if (top) top.style.display = q ? "none" : "";
+        var em = sideEl.querySelector(".doc-filter-empty"); if (em) em.style.display = shown > 0 ? "none" : "";
+      });
+    }
     sideEl.querySelectorAll("[data-doc-top]").forEach(function(b){b.addEventListener("click",function(){mainEl.scrollIntoView({behavior:"smooth",block:"start"});});});
     sideEl.querySelectorAll(".grp > button").forEach(function (b) {
       b.addEventListener("click", function () { b.parentElement.classList.toggle("collapsed"); });
