@@ -550,7 +550,7 @@ async function searchTitles(page, q) {
     assert.ok(/Cash Me If You Can/.test(t) && /Collect/.test(t) && /генерация сессий|сгенерировать игровую сессию|игровую сессию/.test(t), "нет сути ответов");
     assert.ok(!/Kirill|Oleg|Lyan|Masko|006723|007045/.test(t), "в FAQ попали имена или номера клиентов");
     const cnt = await page.$eval('.tab[data-tab="faq"] .cnt', (e) => +e.textContent);
-    assert.strictEqual(cnt, 84, "счётчик FAQ");
+    assert.ok(cnt >= 84, "счётчик FAQ: " + cnt);
   });
 
   await check("поиск: «ставка с нулевой суммой» и «тестовые аккаунты» находят FAQ", async () => {
@@ -561,6 +561,19 @@ async function searchTitles(page, q) {
       const t = await page.$$eval("#results .res .t", (e) => e.map((x) => x.textContent));
       assert.ok(t.some((x) => /Q&A/.test(x) && (/нулев/i.test(x) || /аккаунт/i.test(x))), q + ": " + t.slice(0, 8).join(" | "));
     }
+  });
+
+  await check("FAQ Integration: вопросы Eeze_Tech — нулевая ставка (bet_free) и обязательные/опциональные методы API", async () => {
+    await go("#/faq/integration/1430454573");
+    const r = await page.evaluate(() => [...document.querySelectorAll("details.qa")].map((d) => ({ q: d.querySelector("summary").textContent, a: d.querySelector(".ans").textContent })));
+    const zero = r.find((x) => /нулев/i.test(x.q) && /Eeze_Tech/.test(x.q));
+    const api = r.find((x) => /обязательн/i.test(x.q) && /Eeze_Tech/.test(x.q));
+    assert.ok(zero && /bet_free/.test(zero.a), "нет вопроса про нулевую ставку");
+    assert.ok(api, "нет вопроса про обязательные методы");
+    for (const m of ["Generate JWT token", "Get game list", "Start game", "Start demo game", "List Of Available Bets", "Create bonus campaign",
+      "Delete bonus campaign", "Bet transaction for player", "Win transaction for player", "Refund transaction for player", "Balance request",
+      "FreeBonus request", "Finish round request", "Transaction information request"]) assert.ok(api.a.indexOf(m) >= 0, "нет метода: " + m);
+    assert.strictEqual(await page.$eval('.tab[data-tab="faq"] .cnt', (e) => +e.textContent), 86, "счётчик FAQ");
   });
 
   await check("на сайте нет ошибок JavaScript", async () => {
