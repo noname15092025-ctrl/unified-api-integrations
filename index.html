@@ -1244,7 +1244,7 @@ If new parameters or features appear in the API, we will let you know.`},
     }
     if (p[0] === "faq-slack") {
       S.tab = "faq-slack"; S.cat = SL_TOPICS[p[1]] ? p[1] : null;
-      if (/^\d+$/.test(p[2] || "")) { S.openSl = +p[2]; S.scrollQa = true; }
+      if (/^\d+$/.test(p[2] || "") && SL_FAQ[+p[2]]) { S.openSl = +p[2]; S.cat = SL_FAQ[S.openSl].t; S.scrollQa = true; }
       return;
     }
     if (p[0] === "ref") {
