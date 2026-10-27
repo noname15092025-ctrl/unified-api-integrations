@@ -402,6 +402,34 @@ async function searchTitles(page, q) {
     assert.strictEqual(overlap, false, "кнопка «Копировать» перекрывает текст");
   });
 
+  await check("TestOps: отдельное сообщение для Mancala с MancalaDjangoMock и его играми, с кнопкой «Копировать»", async () => {
+    await go("#/doc-testops");
+    const r = await page.evaluate(() => {
+      const h = [...document.querySelectorAll("#content h3")].find((x) => /Mancala/.test(x.textContent));
+      if (!h) return null;
+      let t = "", copy = false;
+      for (let n = h.nextElementSibling; n && !/^H[23]$/.test(n.tagName); n = n.nextElementSibling) {
+        t += n.textContent + " ";
+        copy = copy || (!!n.querySelector("pre.code") && /MancalaDjangoMock/.test(n.textContent));
+      }
+      const w = [...document.querySelectorAll("#content h3")].some((x) => /Winfinity/.test(x.textContent));
+      return { t, copy, w };
+    });
+    assert.ok(r, "нет подраздела Mancala");
+    assert.ok(r.w, "нет подраздела Winfinity");
+    assert.ok(r.copy, "нет блока с MancalaDjangoMock для копирования");
+    assert.ok(/games/.test(r.t) && /test account/.test(r.t), r.t.slice(0, 200));
+    assert.ok(!/WinfinityMock/.test(r.t), "в Mancala попал WinfinityMock");
+  });
+
+  await check("поиск: «MancalaDjangoMock» находит TestOps", async () => {
+    await go("#/b2b");
+    await page.fill("#search", "MancalaDjangoMock");
+    await page.waitForTimeout(250);
+    const t = await page.$$eval("#results .res .t", (e) => e.map((x) => x.textContent));
+    assert.ok(t.some((x) => /TestOps/.test(x)), t.join(" | "));
+  });
+
   await check("поиск: «WinfinityMock» находит TestOps", async () => {
     await go("#/b2b");
     await page.fill("#search", "WinfinityMock");
