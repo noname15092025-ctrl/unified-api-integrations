@@ -625,6 +625,34 @@ async function searchTitles(page, q) {
     for (const t of ["#/b2b", "#/doc-backoffice", "#/faq-slack"]) assert.ok(r.links.indexOf(t) >= 0, "нет ссылки на раздел " + t);
   });
 
+  await check("надпись «API Portal» в шапке ведёт на HOME", async () => {
+    await go("#/faq-slack");
+    await page.click(".brand >> text=API Portal");
+    await page.waitForTimeout(400);
+    assert.ok(/#\/home$/.test(page.url()), page.url());
+    assert.ok(await page.$eval(".home-tab", (e) => e.classList.contains("active")), "HOME не активен");
+  });
+
+  await check("FAQ: «Справочные материалы» в том же формате, что «Разделы портала» на HOME", async () => {
+    const style = () => page.evaluate(() => {
+      const card = document.querySelector("#content .home-sections > a.ref-card");
+      if (!card) return null;
+      const b = card.querySelector("b"), sp = card.querySelector("span"), g = card.parentElement;
+      return { b: [getComputedStyle(b).fontSize, getComputedStyle(b).color, getComputedStyle(b).fontWeight].join(" "),
+        s: [getComputedStyle(sp).fontSize, getComputedStyle(sp).color].join(" "), grid: getComputedStyle(g).gridTemplateColumns.split(" ").length,
+        n: g.querySelectorAll("a.ref-card").length };
+    });
+    await go("#/home");
+    const home = await style();
+    await go("#/faq");
+    const faq = await style();
+    assert.ok(faq, "в FAQ справочные материалы не в сетке карточек-ссылок");
+    assert.strictEqual(faq.b, home.b, "заголовок карточки отличается");
+    assert.strictEqual(faq.s, home.s, "подпись карточки отличается");
+    assert.strictEqual(faq.grid, home.grid, "другое число колонок");
+    assert.ok(faq.n >= 10, "карточек: " + faq.n);
+  });
+
   await check("HOME: сайт без адреса открывает главную", async () => {
     await page.goto(URL);
     await page.waitForTimeout(400);
