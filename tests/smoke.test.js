@@ -639,6 +639,29 @@ async function searchTitles(page, q) {
     assert.ok(/#\/home$/.test(page.url()), page.url());
   });
 
+  await check("HOME: раздел «Основные чаты и их описание [SLACK]» — 12 каналов, ведущие и дополнительные, источник внизу", async () => {
+    await go("#/home");
+    const r = await page.evaluate(() => {
+      const h = [...document.querySelectorAll("#content h2")].find((x) => /Основные чаты и их описание \[SLACK\]/.test(x.textContent));
+      if (!h) return null;
+      let t = "", links = [];
+      for (let n = h.nextElementSibling; n && n.tagName !== "H2"; n = n.nextElementSibling) {
+        t += n.textContent + " ";
+        n.querySelectorAll("a").forEach((a) => links.push(a.getAttribute("href")));
+      }
+      const src = document.querySelector("#content > .doc-sources");
+      return { t, links, side: [...document.querySelectorAll(".side [data-doc-section] .p")].map((x) => x.textContent),
+        src: src && [...src.querySelectorAll("a")].map((a) => a.href), last: document.querySelector("#content").lastElementChild === src };
+    });
+    assert.ok(r, "нет раздела");
+    for (const c of ["911-production-incident", "agg_alerts-prod", "agg_support-integrations", "agg_support_and_integration", "devops-issuer",
+      "support-team", "agg_devops-maintenance", "minsk_office", "отпуск_больничный", "общий", "беседка", "agg_release"]) assert.ok(r.t.indexOf(c) >= 0, "нет канала " + c);
+    assert.ok(/Ведущие чаты/.test(r.t) && /Дополнительные чаты/.test(r.t), "нет деления на ведущие и дополнительные");
+    assert.ok(r.links.indexOf("#/doc-incidents") >= 0, "нет ссылки на Incident Management");
+    assert.ok(r.side.some((x) => /Основные чаты/.test(x)), "нет в содержании");
+    assert.ok(r.src && r.src.some((u) => /1140097177/.test(u)) && r.last, "нет источника внизу страницы");
+  });
+
   await check("на сайте нет ошибок JavaScript", async () => {
     assert.deepStrictEqual(errors, []);
   });
