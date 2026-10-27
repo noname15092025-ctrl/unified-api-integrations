@@ -1099,22 +1099,16 @@ If new parameters or features appear in the API, we will let you know.`},
         });
       });
     });
-    TG_FAQ.forEach(function (it, i) {
-      IDX.push({
-        kind: "tg", cat: it.t, idx: i, tag: "FAQ TG",
-        title: it.q.replace(/\s+/g, " ").slice(0, 160),
-        sub: TG_TOPICS[it.t] || "",
-        plain: plainText(it.a),
-        text: withRu((it.q + " \n " + it.a).toLowerCase(), it.q + "\n" + it.a)
-      });
-    });
-    SL_FAQ.forEach(function (it, i) {
-      IDX.push({
-        kind: "sl", cat: it.t, idx: i, tag: "FAQ Slack",
-        title: it.q.replace(/\s+/g, " ").slice(0, 160),
-        sub: SL_TOPICS[it.t] || "",
-        plain: plainText(it.a),
-        text: (it.q + " \n " + it.a).toLowerCase()
+    Object.keys(TOPIC_FAQS).forEach(function (tab) {
+      var tc = TOPIC_FAQS[tab];
+      tc.list.forEach(function (it, i) {
+        IDX.push({
+          kind: "topic", tab: tab, cat: it.t, idx: i, tag: tc.title,
+          title: it.q.replace(/\s+/g, " ").slice(0, 160),
+          sub: tc.topics[it.t] || "",
+          plain: plainText(it.a),
+          text: withRu((it.q + " \n " + it.a).toLowerCase(), it.q + "\n" + it.a)
+        });
       });
     });
     (DATA.docs||[]).forEach(function(d){IDX.push({kind:"doc",doc:d.key,tag:"Документ",title:d.title,sub:d.source,plain:plainText(d.content),text:withRu((d.title+" \n "+d.content).toLowerCase(),d.content)});});
@@ -1237,14 +1231,11 @@ If new parameters or features appear in the API, we will let you know.`},
       if (p[2] && /^\d+$/.test(p[3] || "")) { S.openQa = p[2] + "#" + p[3]; S.scrollQa = true; }
       return;
     }
-    if (p[0] === "faq-tg") {
-      S.tab = "faq-tg"; S.cat = TG_TOPICS[p[1]] ? p[1] : null;
-      if (/^\d+$/.test(p[2] || "")) { S.openTg = +p[2]; S.scrollQa = true; }
-      return;
-    }
-    if (p[0] === "faq-slack") {
-      S.tab = "faq-slack"; S.cat = SL_TOPICS[p[1]] ? p[1] : null;
-      if (/^\d+$/.test(p[2] || "") && SL_FAQ[+p[2]]) { S.openSl = +p[2]; S.cat = SL_FAQ[S.openSl].t; S.scrollQa = true; }
+    var tc = TOPIC_FAQS[p[0]];
+    if (tc) {
+      S.tab = p[0]; S.cat = tc.topics[p[1]] ? p[1] : null;
+      /* the question decides its topic, so a link with a stale topic still opens it */
+      if (/^\d+$/.test(p[2] || "") && tc.list[+p[2]]) { S.openTopic = +p[2]; S.cat = tc.list[S.openTopic].t; S.scrollQa = true; }
       return;
     }
     if (p[0] === "ref") {
@@ -1680,54 +1671,12 @@ If new parameters or features appear in the API, we will let you know.`},
     }).join("<br>") + "</div>";
   }
 
-  function tgView(filter) {
-    var f = (filter || "").toLowerCase();
-    var h = '<div class="crumbs"><a href="#/faq-tg">FAQ TG</a>' + (S.cat ? " / " + esc(TG_TOPICS[S.cat]) : "") + "</div>";
-    h += '<h1 class="cat-head">' + esc(S.cat ? TG_TOPICS[S.cat] : "FAQ TG") + '</h1><p class="cat-note">Вопросы партнёров и ответы @supphelper1 из рабочих чатов Telegram.</p>';
-    var any = false;
-    Object.keys(TG_TOPICS).forEach(function (k) {
-      if (S.cat && S.cat !== k) return;
-      var items = [];
-      TG_FAQ.forEach(function (it, i) { if (it.t === k && tgMatches(it, f)) items.push(i); });
-      if (!items.length) return;
-      any = true;
-      h += '<div class="src-head"><h3>' + esc(TG_TOPICS[k]) + '</h3><span class="sp">TG</span>' +
-        '<span style="color:var(--muted);font-size:12.5px">' + items.length + " вопр.</span></div>";
-      items.forEach(function (i) {
-        var it = TG_FAQ[i];
-        h += '<details class="qa"' + (S.openTg === i ? " open" : "") + ' id="tg-' + i + '"><summary>' + esc(it.q) + "</summary>" +
-          '<div class="ans"><div class="ans-plain">' + esc(it.a) + "</div>" + tgSources(it) + "</div></details>";
-      });
-    });
-    S.openTg = null;
-    return any ? h : h + '<div class="empty">Ничего не найдено. Очистите фильтр или выберите другую тему.</div>';
-  }
 
   /* ---------------------------------------------------------- FAQ Slack */
   var SL_CH = { "devops-issuer": "#devops-issuer", "agg_analytics_questions": "#agg_analytics_questions" };
-  function slView(filter) {
-    var f = (filter || "").toLowerCase();
-    var h = '<div class="crumbs"><a href="#/faq-slack">FAQ Slack</a>' + (S.cat ? " / " + esc(SL_TOPICS[S.cat]) : "") + "</div>";
-    h += '<h1 class="cat-head">' + esc(S.cat ? SL_TOPICS[S.cat] : "FAQ Slack") + '</h1><p class="cat-note">Запросы команды поддержки и интеграции и ответы на них из Slack-каналов #agg_analytics_questions и #devops-issuer (окт. 2025 – окт. 2026). Ответы сведены в краткую форму; имена, логины, пароли и ключи не публикуются.</p>';
-    var any = false;
-    Object.keys(SL_TOPICS).forEach(function (k) {
-      if (S.cat && S.cat !== k) return;
-      var items = [];
-      SL_FAQ.forEach(function (it, i) { if (it.t === k && tgMatches(it, f)) items.push(i); });
-      if (!items.length) return;
-      any = true;
-      h += '<div class="src-head"><h3>' + esc(SL_TOPICS[k]) + '</h3><span class="sp">Slack</span>' +
-        '<span style="color:var(--muted);font-size:12.5px">' + items.length + " вопр.</span></div>";
-      items.forEach(function (i) {
-        var it = SL_FAQ[i];
-        var src = '<div class="extra tg-src"><b>Источник в Slack:</b> ' + esc(SL_CH[it.ch] || it.ch) + " · " + esc(it.d.split("-").reverse().join(".")) +
-          (it.u ? ' · <a href="' + attr(it.u) + '" target="_blank" rel="noopener">открыть тред</a>' : "") + "</div>";
-        h += '<details class="qa"' + (S.openSl === i ? " open" : "") + ' id="sl-' + i + '"><summary>' + esc(it.q) + "</summary>" +
-          '<div class="ans">' + md(it.a) + src + "</div></details>";
-      });
-    });
-    S.openSl = null;
-    return any ? h : h + '<div class="empty">Ничего не найдено. Очистите фильтр или выберите другую тему.</div>';
+  function slSource(it) {
+    return '<div class="extra tg-src"><b>Источник в Slack:</b> ' + esc(SL_CH[it.ch] || it.ch) + " · " + esc(it.d.split("-").reverse().join(".")) +
+      (it.u ? ' · <a href="' + attr(it.u) + '" target="_blank" rel="noopener">открыть тред</a>' : "") + "</div>";
   }
 
   /* FAQ Slack: English terms get a Russian hover translation from SL_GLOSS */
@@ -1761,6 +1710,45 @@ If new parameters or features appear in the API, we will let you know.`},
       while (span.firstChild) n.parentNode.insertBefore(span.firstChild, n);
       n.parentNode.removeChild(n);
     });
+  }
+
+
+  /* ---------------------------------------------------------- topic FAQs (FAQ TG, FAQ Slack)
+     One description per tab; routing, sidebar, page, search index and counters all read it. */
+  var TOPIC_FAQS = {
+    "faq-tg": {
+      list: TG_FAQ, topics: TG_TOPICS, title: "FAQ TG", badge: "TG", filterId: "tg-filter", q: "tq",
+      note: "Вопросы партнёров и ответы @supphelper1 из рабочих чатов Telegram.",
+      answer: function (it) { return '<div class="ans-plain">' + esc(it.a) + "</div>" + tgSources(it); }
+    },
+    "faq-slack": {
+      list: SL_FAQ, topics: SL_TOPICS, title: "FAQ Slack", badge: "Slack", filterId: "sl-filter", q: "sq",
+      note: "Запросы команды поддержки и интеграции и ответы на них из Slack-каналов #agg_analytics_questions и #devops-issuer (окт. 2025 – окт. 2026). Ответы сведены в краткую форму; имена, логины, пароли и ключи не публикуются.",
+      answer: function (it) { return md(it.a) + slSource(it); },
+      after: slGloss
+    }
+  };
+  function topicView(tab, filter) {
+    var c = TOPIC_FAQS[tab], f = (filter || "").toLowerCase(), base = "#/" + tab;
+    var h = '<div class="crumbs"><a href="' + base + '">' + esc(c.title) + "</a>" + (S.cat ? " / " + esc(c.topics[S.cat]) : "") + "</div>";
+    h += '<h1 class="cat-head">' + esc(S.cat ? c.topics[S.cat] : c.title) + '</h1><p class="cat-note">' + esc(c.note) + "</p>";
+    var any = false;
+    Object.keys(c.topics).forEach(function (k) {
+      if (S.cat && S.cat !== k) return;
+      var items = [];
+      c.list.forEach(function (it, i) { if (it.t === k && tgMatches(it, f)) items.push(i); });
+      if (!items.length) return;
+      any = true;
+      h += '<div class="src-head"><h3>' + esc(c.topics[k]) + '</h3><span class="sp">' + esc(c.badge) + "</span>" +
+        '<span style="color:var(--muted);font-size:12.5px">' + items.length + " вопр.</span></div>";
+      items.forEach(function (i) {
+        var it = c.list[i];
+        h += '<details class="qa"' + (S.openTopic === i ? " open" : "") + ' id="' + tab + "-" + i + '"><summary>' + esc(it.q) + "</summary>" +
+          '<div class="ans">' + c.answer(it) + "</div></details>";
+      });
+    });
+    S.openTopic = null;
+    return any ? h : h + '<div class="empty">Ничего не найдено. Очистите фильтр или выберите другую тему.</div>';
   }
 
   /* every Q&A card (FAQ and FAQ TG) gets the same copy button under the answer */
@@ -1928,13 +1916,11 @@ If new parameters or features appear in the API, we will let you know.`},
       mainEl.innerHTML = docView(docPage);
       var hs=mainEl.querySelectorAll(".md h1,.md h2,.md h3,.md h4");
       Array.prototype.forEach.call(hs,function(h,i){h.id=docPage.key+"-section-"+i;});
-    } else if (S.tab === "faq-slack") {
-      sideEl.innerHTML = renderSideTopics(SL_FAQ, SL_TOPICS, "#/faq-slack", "sl-filter", S.sq || "");
-      mainEl.innerHTML = slView(S.sq || "");
-      slGloss(mainEl);
-    } else if (S.tab === "faq-tg") {
-      sideEl.innerHTML = renderSideTopics(TG_FAQ, TG_TOPICS, "#/faq-tg", "tg-filter", S.tq || "");
-      mainEl.innerHTML = tgView(S.tq || "");
+    } else if (TOPIC_FAQS[S.tab]) {
+      var tc = TOPIC_FAQS[S.tab];
+      sideEl.innerHTML = renderSideTopics(tc.list, tc.topics, "#/" + S.tab, tc.filterId, S[tc.q] || "");
+      mainEl.innerHTML = topicView(S.tab, S[tc.q] || "");
+      if (tc.after) tc.after(mainEl);
     } else if (S.tab === "faq") {
       sideEl.innerHTML = renderSideFaq(S.fq || "");
       if (S.ref) {
@@ -2002,7 +1988,7 @@ If new parameters or features appear in the API, we will let you know.`},
       });
     }
     /* sidebar filters: typing re-renders the page, then focus and caret go back into the same box */
-    [["sl-filter", "sq"], ["tg-filter", "tq"]].forEach(function (fk) {
+    Object.keys(TOPIC_FAQS).map(function (k) { return [TOPIC_FAQS[k].filterId, TOPIC_FAQS[k].q]; }).forEach(function (fk) {
       var el = document.getElementById(fk[0]);
       if (!el) return;
       el.addEventListener("input", function () {
@@ -2121,8 +2107,7 @@ If new parameters or features appear in the API, we will let you know.`},
         document.getElementById("search-clear").style.display = "none";
         if (it.kind === "op") nav("#/" + it.api + "/" + encodeURIComponent(it.uid));
         else if (it.kind === "qa") { S.openQa = it.page + "#" + it.idx; nav("#/faq/" + it.cat + "/" + it.page); setTimeout(revealOpen, 60); }
-        else if (it.kind === "sl") { S.openSl = it.idx; nav("#/faq-slack/" + it.cat); setTimeout(revealOpen, 60); }
-        else if (it.kind === "tg") { S.openTg = it.idx; nav("#/faq-tg/" + it.cat); setTimeout(revealOpen, 60); }
+        else if (it.kind === "topic") { S.openTopic = it.idx; nav("#/" + it.tab + "/" + it.cat); setTimeout(revealOpen, 60); }
         else if (it.kind === "doc") nav("#/" + it.doc);
         else nav("#/ref/" + it.page);
       });
@@ -2271,8 +2256,7 @@ If new parameters or features appear in the API, we will let you know.`},
       if (t.dataset.tab === "b2b") t.querySelector(".cnt").textContent = Object.keys(APIS.b2b.operations).length;
       if (t.dataset.tab === "aggr") t.querySelector(".cnt").textContent = Object.keys(APIS.aggr.operations).length;
       if (t.dataset.tab === "faq") t.querySelector(".cnt").textContent = DATA.meta.qaPairs;
-      if (t.dataset.tab === "faq-tg") t.querySelector(".cnt").textContent = TG_FAQ.length;
-      if (t.dataset.tab === "faq-slack") t.querySelector(".cnt").textContent = SL_FAQ.length;
+      if (TOPIC_FAQS[t.dataset.tab]) t.querySelector(".cnt").textContent = TOPIC_FAQS[t.dataset.tab].list.length;
       if (t.dataset.tab === "mancala") t.querySelector(".cnt").textContent = Object.keys(APIS.mancala.operations).length;
       if (APIS[t.dataset.tab]) t.querySelector(".cnt").textContent = Object.keys(APIS[t.dataset.tab].operations).length;
       if (DATA.docs && DATA.docs.some(function(d){return d.key===t.dataset.tab;})) { var dp=DATA.docs.filter(function(d){return d.key===t.dataset.tab;})[0]; t.querySelector(".cnt").textContent=docHeadings(dp).length; }
