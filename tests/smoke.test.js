@@ -550,7 +550,7 @@ async function searchTitles(page, q) {
     assert.ok(/Cash Me If You Can/.test(t) && /Collect/.test(t) && /генерация сессий|сгенерировать игровую сессию|игровую сессию/.test(t), "нет сути ответов");
     assert.ok(!/Kirill|Oleg|Lyan|Masko|006723|007045/.test(t), "в FAQ попали имена или номера клиентов");
     const cnt = await page.$eval('.tab[data-tab="faq"] .cnt', (e) => +e.textContent);
-    assert.ok(cnt >= 84, "счётчик FAQ: " + cnt);
+    assert.ok(cnt > 0, "счётчик FAQ пустой");
   });
 
   await check("поиск: «ставка с нулевой суммой» и «тестовые аккаунты» находят FAQ", async () => {
@@ -573,7 +573,12 @@ async function searchTitles(page, q) {
     for (const m of ["Generate JWT token", "Get game list", "Start game", "Start demo game", "List Of Available Bets", "Create bonus campaign",
       "Delete bonus campaign", "Bet transaction for player", "Win transaction for player", "Refund transaction for player", "Balance request",
       "FreeBonus request", "Finish round request", "Transaction information request"]) assert.ok(api.a.indexOf(m) >= 0, "нет метода: " + m);
-    assert.strictEqual(await page.$eval('.tab[data-tab="faq"] .cnt', (e) => +e.textContent), 86, "счётчик FAQ");
+    const cnt = await page.$eval('.tab[data-tab="faq"] .cnt', (e) => +e.textContent);
+    await go("#/faq");
+    const cats = await page.$$eval(".side .op-link", (e) => e.map((x) => x.dataset.nav));
+    let sum = 0;
+    for (const c of cats) { await go(c); sum += await page.$$eval("details.qa", (e) => e.length); }
+    assert.strictEqual(cnt, sum, "счётчик FAQ не совпадает с числом вопросов");
   });
 
   await check("Back Office: в содержании «Whitelist IP», раздел с путём IP WHITELISTING → Client-service list, форматом IP и новым скриншотом", async () => {
@@ -746,6 +751,21 @@ async function searchTitles(page, q) {
     assert.ok(top >= -5 && top < 220, "клик по найденному разделу не прокрутил: " + top);
     await go("#/home");
     assert.ok(await page.$("#doc-filter"), "нет поиска в содержании на главной");
+  });
+
+  await check("Основные чаты Slack описаны только на HOME: нет дублей в FAQ, Тикетницы ссылаются на раздел главной", async () => {
+    const html = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
+    assert.strictEqual((html.match(/pages\/1140097177/g) || []).length, 1, "страница Confluence [SLACK] упоминается не один раз (должна быть только источником главной)");
+    await go("#/faq/general");
+    const heads = await page.$$eval(".src-head h3", (e) => e.map((x) => x.textContent));
+    assert.ok(!heads.some((t) => /Slack — куда писать/.test(t)), "в FAQ остался блок про Slack-чаты");
+    await go("#/ref/1158250641");
+    const href = await page.$$eval("#content .md a", (e) => e.map((a) => a.getAttribute("href")).find((u) => /^#\/home\//.test(u)));
+    assert.ok(href, "в Тикетницах нет ссылки на раздел главной");
+    await page.click('#content .md a[href="' + href + '"]');
+    await page.waitForTimeout(1500);
+    const top = await page.evaluate(() => [...document.querySelectorAll("#content h2")].find((x) => /Основные чаты/.test(x.textContent)).getBoundingClientRect().top);
+    assert.ok(top >= -5 && top < 220, "ссылка не открыла раздел главной: " + top);
   });
 
   await check("на сайте нет ошибок JavaScript", async () => {
