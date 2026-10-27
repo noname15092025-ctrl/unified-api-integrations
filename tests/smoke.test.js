@@ -272,6 +272,26 @@ async function searchTitles(page, q) {
     }
   });
 
+  await check("Back Office: в самом верху выделенный блок с новыми адресами БО (прод и UAT, AGG / Winfinity / Mancala)", async () => {
+    await go("#/doc-backoffice");
+    const r = await page.evaluate(() => {
+      const body = document.querySelector("#content .doc-body");
+      const first = body && body.firstElementChild;
+      return first && { cls: first.className, text: first.textContent, links: [...first.querySelectorAll("a")].map((a) => a.href) };
+    });
+    assert.ok(r && /md-panel-warning/.test(r.cls), "первым идёт не выделенный блок: " + (r && r.cls));
+    for (const u of ["https://aggbet.backofficego.com/", "https://winfinity.backofficego.com/", "https://mancala.backofficego.com/",
+      "https://aggbet.uat.backofficego.com/", "https://winfinity.uat.backofficego.com/", "https://mancala.uat.backofficego.com/"]) {
+      assert.ok(r.links.indexOf(u) >= 0, "нет ссылки " + u);
+    }
+    assert.ok(/Winfinity/.test(r.text) && /Mancala/.test(r.text) && /брендинг/.test(r.text), r.text.slice(0, 200));
+  });
+
+  await check("старого адреса БО fr.agg.bet больше нет", async () => {
+    const html = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
+    assert.ok(!/fr\.agg\.bet/.test(html));
+  });
+
   await check("на сайте нет ошибок JavaScript", async () => {
     assert.deepStrictEqual(errors, []);
   });
