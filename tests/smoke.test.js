@@ -240,6 +240,38 @@ async function searchTitles(page, q) {
     assert.ok(t.length > 20 && !/Источник в Slack/.test(t) && !/Копировать/.test(t), t.slice(0, 80));
   });
 
+  await check("Back Office: раздел Whitelist / Blacklist игр со скриншотом и путём Game access → Black list", async () => {
+    await go("#/doc-backoffice");
+    const side = await page.$$eval(".side [data-doc-section] .p", (e) => e.map((x) => x.textContent));
+    assert.ok(side.some((t) => /Whitelist \/ Blacklist игр/.test(t)), "нет пункта в содержании");
+    const sec = await page.evaluate(() => {
+      const h = [...document.querySelectorAll("#content h2")].find((x) => /Whitelist \/ Blacklist игр/.test(x.textContent));
+      if (!h) return null;
+      let t = "", img = null;
+      for (let n = h.nextElementSibling; n && n.tagName !== "H2" && n.tagName !== "H1"; n = n.nextElementSibling) {
+        t += n.textContent + " ";
+        img = img || n.querySelector("img");
+      }
+      if (img) img.scrollIntoView();
+      return { t, src: img && img.getAttribute("src") };
+    });
+    await page.waitForTimeout(800);
+    if (sec) sec.ok = await page.$eval('img[src="' + sec.src + '"]', (i) => i.complete && i.naturalWidth > 0);
+    assert.ok(sec, "нет раздела");
+    assert.ok(/B2B MANAGEMENT/.test(sec.t) && /Game access/.test(sec.t) && /Black list/.test(sec.t) && /Grant access/.test(sec.t) && /failed/.test(sec.t), sec.t.slice(0, 200));
+    assert.ok(sec.src && sec.ok, "картинка не загрузилась: " + sec.src);
+  });
+
+  await check("поиск: «blacklist» и «чёрный список» находят раздел Back Office", async () => {
+    await go("#/b2b");
+    for (const q of ["blacklist", "чёрный список"]) {
+      await page.fill("#search", q);
+      await page.waitForTimeout(250);
+      const t = await page.$$eval("#results .res .t", (e) => e.map((x) => x.textContent));
+      assert.ok(t.some((x) => /Back Office/.test(x)), q + ": " + t.slice(0, 8).join(" | "));
+    }
+  });
+
   await check("на сайте нет ошибок JavaScript", async () => {
     assert.deepStrictEqual(errors, []);
   });
