@@ -541,6 +541,28 @@ async function searchTitles(page, q) {
     assert.ok(t.some((x) => /TVBet/i.test(x)), t.join(" | "));
   });
 
+  await check("FAQ Support: вопросы про тестовые аккаунты и ставки с нулевой суммой; счётчик FAQ = сумме вопросов", async () => {
+    await go("#/faq/support/1430454573");
+    const qs = await page.$$eval("details.qa summary", (e) => e.map((x) => x.textContent));
+    assert.ok(qs.some((q) => /тестовые аккаунты/i.test(q)), "нет вопроса про тестовые аккаунты");
+    assert.ok(qs.some((q) => /нулевой суммой/i.test(q)), "нет вопроса про ставки с нулевой суммой");
+    const t = await page.$eval("#content", (e) => e.textContent);
+    assert.ok(/Cash Me If You Can/.test(t) && /Collect/.test(t) && /генерация сессий|сгенерировать игровую сессию|игровую сессию/.test(t), "нет сути ответов");
+    assert.ok(!/Kirill|Oleg|Lyan|Masko|006723|007045/.test(t), "в FAQ попали имена или номера клиентов");
+    const cnt = await page.$eval('.tab[data-tab="faq"] .cnt', (e) => +e.textContent);
+    assert.strictEqual(cnt, 84, "счётчик FAQ");
+  });
+
+  await check("поиск: «ставка с нулевой суммой» и «тестовые аккаунты» находят FAQ", async () => {
+    await go("#/b2b");
+    for (const q of ["ставка с нулевой суммой", "тестовые аккаунты"]) {
+      await page.fill("#search", q);
+      await page.waitForTimeout(250);
+      const t = await page.$$eval("#results .res .t", (e) => e.map((x) => x.textContent));
+      assert.ok(t.some((x) => /Q&A/.test(x) && (/нулев/i.test(x) || /аккаунт/i.test(x))), q + ": " + t.slice(0, 8).join(" | "));
+    }
+  });
+
   await check("на сайте нет ошибок JavaScript", async () => {
     assert.deepStrictEqual(errors, []);
   });
