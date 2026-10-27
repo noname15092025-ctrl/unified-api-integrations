@@ -576,6 +576,29 @@ async function searchTitles(page, q) {
     assert.strictEqual(await page.$eval('.tab[data-tab="faq"] .cnt', (e) => +e.textContent), 86, "счётчик FAQ");
   });
 
+  await check("Back Office: в содержании «Whitelist IP», раздел с путём IP WHITELISTING → Client-service list, форматом IP и новым скриншотом", async () => {
+    await go("#/doc-backoffice");
+    const side = await page.$$eval(".side [data-doc-section] .p", (e) => e.map((x) => x.textContent));
+    assert.strictEqual(side.filter((t) => /Whitelist IP/.test(t)).length, 1, "в содержании нет ровно одного пункта Whitelist IP");
+    assert.ok(!side.some((t) => /^Добавить IP-адреса в whitelist$/.test(t)), "старый пункт остался");
+    const r = await page.evaluate(() => {
+      const h = [...document.querySelectorAll("#content h2")].find((x) => /Whitelist IP/.test(x.textContent));
+      let t = "", links = [], imgs = [];
+      for (let n = h.nextElementSibling; n && !/^H[12]$/.test(n.tagName); n = n.nextElementSibling) {
+        t += n.textContent + " ";
+        n.querySelectorAll("a").forEach((a) => links.push(a.href));
+        n.querySelectorAll("img").forEach((i) => imgs.push(i));
+      }
+      imgs.forEach((i) => i.scrollIntoView());
+      return { t, links, srcs: imgs.map((i) => i.getAttribute("src")) };
+    });
+    assert.ok(/root BO/.test(r.t) && /IP WHITELISTING/.test(r.t) && /Client-service list/.test(r.t) && /Edit/.test(r.t) && /49\.13\.169\.177, 46\.225\.34\.202/.test(r.t), r.t.slice(0, 300));
+    assert.ok(r.links.indexOf("https://aggbet.backofficego.com/ip-whitelisting/client-service") >= 0, "нет ссылки на Client-service list");
+    assert.ok(r.srcs.some((s) => /backoffice\/whitelist\/01\.png/.test(s)), "нет нового скриншота");
+    await page.waitForTimeout(800);
+    for (const s of r.srcs) assert.ok(await page.$eval('img[src="' + s + '"]', (i) => i.complete && i.naturalWidth > 0), "не загрузилась " + s);
+  });
+
   await check("на сайте нет ошибок JavaScript", async () => {
     assert.deepStrictEqual(errors, []);
   });
