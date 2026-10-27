@@ -15,6 +15,8 @@ const results = [];
 async function check(name, fn) {
   try { await fn(); results.push(["ok", name]); }
   catch (e) { results.push(["FAIL", name + " — " + e.message.split("\n")[0]]); }
+  const r = results[results.length - 1];
+  console.log((r[0] === "ok" ? "  ✓ " : "  ✗ ") + r[1]);
 }
 
 async function searchTitles(page, q) {
@@ -168,7 +170,7 @@ async function searchTitles(page, q) {
     const crumbs = await page.$eval(".crumbs", (e) => e.textContent);
     assert.ok(/FAQ \/ Support \/ /.test(crumbs), crumbs);
     assert.strictEqual(await page.$$eval("details.qa", (e) => e.length), 4);
-    assert.ok(await page.$eval(".cat-note a", (a) => /atlassian\.net/.test(a.href)), "нет ссылки на Confluence");
+    assert.ok(await page.$eval(".doc-sources a", (a) => /atlassian\.net/.test(a.href)), "нет ссылки на Confluence внизу");
   });
 
   await check("FAQ: постоянная ссылка #/faq/<кат>/<стр>/<n> раскрывает вопрос", async () => {
@@ -197,7 +199,7 @@ async function searchTitles(page, q) {
   await check("справочник #/ref/<стр> открывается со ссылкой на Confluence", async () => {
     await go("#/ref/1506279677");
     assert.strictEqual(await page.$eval("h1.cat-head", (e) => e.textContent), "Bonus campaign");
-    assert.ok(await page.$eval(".cat-note a", (a) => /atlassian\.net/.test(a.href)));
+    assert.ok(await page.$eval(".doc-sources a", (a) => /atlassian\.net/.test(a.href)), "нет ссылки на Confluence внизу");
   });
 
   await check("FAQ TG: у ответа есть ссылки на источник в Telegram", async () => {
@@ -206,18 +208,36 @@ async function searchTitles(page, q) {
     assert.ok(n > 10, "ссылок: " + n);
   });
 
-  await check("Postman: блок файла с кнопкой скачивания коллекции и источниками", async () => {
+  await check("Postman: наверху блок файла с кнопкой скачивания коллекции, без источников", async () => {
     await go("#/doc-postman");
     const a = await page.$eval(".file-download-box a.file-download", (a) => a.getAttribute("href"));
     assert.ok(/SV\.postman_collection\.json$/.test(a), a);
-    assert.ok(await page.$$eval(".file-download-info a", (e) => e.length) >= 1, "нет ссылок на источники");
+    assert.strictEqual(await page.$$eval(".file-download-info a", (e) => e.length), 0, "источники всё ещё наверху");
   });
 
-  await check("Back Office: блок источников без кнопки скачивания", async () => {
+  await check("Back Office: наверху нет блока источников", async () => {
     await go("#/doc-backoffice");
-    assert.ok(await page.$(".file-download-box .file-download-info a"), "нет источников");
-    assert.strictEqual(await page.$(".file-download-box a.file-download"), null);
+    assert.strictEqual(await page.$$eval(".file-download-box", (e) => e.length), 0, "блок источников наверху");
   });
+
+  for (const d of ["doc-backoffice", "doc-incidents", "doc-postman", "doc-testops", "b2b", "aggr", "mancala", "broit", "mancala-fs",
+    "round-check", "bet-history", "faq/support", "faq/support/1331691558", "ref/1506279677"]) {
+    await check(d + ": источники внизу страницы, мелким приглушённым текстом", async () => {
+      await go("#/" + d);
+      const r = await page.evaluate(() => {
+        const c = document.querySelector("#content"), src = c.querySelector(".doc-sources"), body = c.querySelector("h1");
+        if (!src) return null;
+        const cs = getComputedStyle(src), bs = getComputedStyle(c);
+        return { last: c.lastElementChild === src, after: !!(body.compareDocumentPosition(src) & Node.DOCUMENT_POSITION_FOLLOWING),
+          links: src.querySelectorAll("a").length, fs: parseFloat(cs.fontSize), bfs: parseFloat(bs.fontSize), color: cs.color, bcolor: bs.color };
+      });
+      assert.ok(r, "нет блока источников");
+      assert.ok(r.last && r.after, "источники не в конце");
+      assert.ok(r.links >= 1, "нет ссылок");
+      assert.ok(r.fs < r.bfs, "шрифт не меньше основного: " + r.fs + " vs " + r.bfs);
+      assert.notStrictEqual(r.color, r.bcolor, "цвет не приглушён");
+    });
+  }
 
   await check("документ: клик по разделу в содержании прокручивает к нему", async () => {
     await go("#/doc-backoffice");
@@ -293,12 +313,36 @@ async function searchTitles(page, q) {
     assert.ok(!/fr\.agg\.bet/.test(html));
   });
 
+  await check("наверху страниц нет ссылок-источников (плашка «Исходная документация», «Открыть в Confluence», ссылки в подзаголовке)", async () => {
+    for (const h of ["#/b2b", "#/mancala", "#/faq/support", "#/faq/support/1331691558", "#/ref/1506279677"]) {
+      await go(h);
+      const bad = await page.$$eval("#content .note, #content .src-head a, #content .cat-note a, #content .file-download-info a",
+        (e) => e.filter((x) => /Исходная документация|Confluence|swagger/i.test(x.textContent)).length);
+      assert.strictEqual(bad, 0, h);
+    }
+  });
+
+  for (const [h, sel] of [["#/faq-tg", ".tg-src"], ["#/faq-slack", ".tg-src"]]) {
+    await check(h + ": строка «Источник…» под ответом мельче и бледнее текста ответа", async () => {
+      await go(h);
+      await page.click("details.qa summary");
+      const r = await page.$eval("details.qa[open]", (q, sel) => {
+        const src = q.querySelector(sel), a = q.querySelector(".ans");
+        const t = [...a.querySelectorAll("p, .ans-plain")][0] || a;
+        const b = src.querySelector("b");
+        return { fs: parseFloat(getComputedStyle(src).fontSize), afs: parseFloat(getComputedStyle(t).fontSize),
+          bw: b ? +getComputedStyle(b).fontWeight : 400, op: +getComputedStyle(src).opacity };
+      }, sel);
+      assert.ok(r.fs < r.afs, r.fs + " vs " + r.afs);
+      assert.ok(r.bw < 600, "подпись жирная");
+    });
+  }
+
   await check("на сайте нет ошибок JavaScript", async () => {
     assert.deepStrictEqual(errors, []);
   });
 
   await browser.close();
-  results.forEach(([s, n]) => console.log((s === "ok" ? "  ✓ " : "  ✗ ") + n));
   const failed = results.filter((r) => r[0] !== "ok").length;
   console.log("\n" + (results.length - failed) + " пройдено, " + failed + " упало");
   process.exit(failed ? 1 : 0);
