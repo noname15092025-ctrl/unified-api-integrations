@@ -662,6 +662,61 @@ async function searchTitles(page, q) {
     assert.ok(r.src && r.src.some((u) => /1140097177/.test(u)) && r.last, "нет источника внизу страницы");
   });
 
+  await check("Back Office: раздел «Ручное изменение статуса транзакций в БО» — путь, поля, формат ID, скриншот", async () => {
+    await go("#/doc-backoffice");
+    const r = await page.evaluate(() => {
+      const h = [...document.querySelectorAll("#content h2")].find((x) => /Ручное изменение статуса транзакций в БО/.test(x.textContent));
+      if (!h) return null;
+      let t = "", imgs = [];
+      for (let n = h.nextElementSibling; n && !/^H[12]$/.test(n.tagName); n = n.nextElementSibling) { t += n.textContent + " "; n.querySelectorAll("img").forEach((i) => imgs.push(i)); }
+      imgs.forEach((i) => i.scrollIntoView());
+      return { t, srcs: imgs.map((i) => i.getAttribute("src")) };
+    });
+    assert.ok(r, "нет раздела");
+    for (const s of ["root BO", "MONITORING", "Transaction management", "Fix transactions", "Provider", 'Set the status to "Success" for the "win" or "win free" transactions.',
+      "Provider transaction ID", "01a0cc73-9a7d-7382-9cca-60c473ca7a81, 01a0cc73-9a7d-7382-9cca-60c473ca7a81"]) assert.ok(r.t.indexOf(s) >= 0, "нет: " + s);
+    assert.ok(r.srcs.some((s) => /backoffice\/fix-transactions\/01\.png/.test(s)), "нет скриншота");
+    await page.waitForTimeout(800);
+    for (const s of r.srcs) assert.ok(await page.$eval('img[src="' + s + '"]', (i) => i.complete && i.naturalWidth > 0), "не загрузилась " + s);
+  });
+
+  await check("ссылка на раздел документа #/doc-backoffice/<раздел> открывает Back Office на этом разделе", async () => {
+    await page.goto(URL + "#/doc-backoffice/" + encodeURIComponent("ручное-изменение-статуса-транзакций-в-бо"));
+    await page.reload();
+    await page.waitForTimeout(1600);
+    const top = await page.evaluate(() => {
+      const h = [...document.querySelectorAll("#content h2")].find((x) => /Ручное изменение статуса транзакций в БО/.test(x.textContent));
+      return h ? h.getBoundingClientRect().top : null;
+    });
+    assert.ok(top !== null && top >= -5 && top < 220, "раздел не наверху: " + top);
+  });
+
+  await check("FAQ: страница «Ручное изменение статуса транзакций» компактная, с картинками, failed transactions и ссылкой на раздел БО", async () => {
+    await go("#/ref/1407516759");
+    const r = await page.evaluate(() => {
+      const md = document.querySelector("#content .md");
+      const imgs = [...md.querySelectorAll("img")];
+      imgs.forEach((i) => i.scrollIntoView());
+      return { len: md.textContent.length, t: md.textContent, srcs: imgs.map((i) => i.getAttribute("src")),
+        links: [...md.querySelectorAll("a")].map((a) => a.getAttribute("href")) };
+    });
+    assert.ok(r.len < 6000, "страница всё ещё объёмная: " + r.len);
+    assert.ok(/failed transactions/.test(r.t) && /23\.10.11\.11/.test(r.t) && /win_free/.test(r.t), "нет блока про failed transactions и период");
+    assert.ok(r.links.some((u) => /docs\.google\.com\/spreadsheets\/d\/1yJCyoGNk98mrWvt_nC85ECx8BdudK7He7f9BWfoaTxY\/edit\?gid=1625509782/.test(u)), "нет ссылки на лист failed transactions");
+    const bo = r.links.find((u) => /^#\/doc-backoffice\//.test(u));
+    assert.ok(bo, "нет ссылки на раздел Back Office");
+    assert.ok(r.srcs.length >= 5, "картинок: " + r.srcs.length);
+    await page.waitForTimeout(800);
+    for (const s of r.srcs) assert.ok(await page.$eval('img[src="' + s + '"]', (i) => i.complete && i.naturalWidth > 0), "не загрузилась " + s);
+    await page.click('#content .md a[href^="#/doc-backoffice/"]');
+    await page.waitForTimeout(1600);
+    const top = await page.evaluate(() => {
+      const h = [...document.querySelectorAll("#content h2")].find((x) => /Ручное изменение статуса транзакций в БО/.test(x.textContent));
+      return h ? h.getBoundingClientRect().top : null;
+    });
+    assert.ok(top !== null && top >= -5 && top < 220, "по ссылке раздел БО не открылся: " + top);
+  });
+
   await check("на сайте нет ошибок JavaScript", async () => {
     assert.deepStrictEqual(errors, []);
   });
