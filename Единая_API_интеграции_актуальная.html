@@ -1779,19 +1779,6 @@ If new parameters or features appear in the API, we will let you know.`},
     });
   }
 
-  /* permalink of one Q&A card: #/faq/<cat>/<page>/<n> or #/faq-tg/<topic>/<n> */
-  function qaLink(qa) {
-    var m = /^tg-(\d+)$/.exec(qa.id || "");
-    if (m && TG_FAQ[+m[1]]) return "#/faq-tg/" + TG_FAQ[+m[1]].t + "/" + m[1];
-    m = /^sl-(\d+)$/.exec(qa.id || "");
-    if (m && SL_FAQ[+m[1]]) return "#/faq-slack/" + SL_FAQ[+m[1]].t + "/" + m[1];
-    m = /^qa-(.+)-(\d+)$/.exec(qa.id || "");
-    if (!m) return "";
-    var cat = null;
-    FAQ.categories.forEach(function (c) { c.blocks.forEach(function (b) { if (b.page === m[1]) cat = cat || c.id; }); });
-    return cat ? "#/faq/" + cat + "/" + m[1] + "/" + m[2] : "";
-  }
-  function absLink(hash) { return location.href.split("#")[0].split("?")[0] + hash; }
   /* hover translation: English blocks that have a Russian version in PORTAL_RU get a tooltip */
   var RU = window.PORTAL_RU || {};
   /* a text block = nearest block-level ancestor of a visible text node; its key = its text with blocks/<br> as spaces */
@@ -2041,13 +2028,6 @@ If new parameters or features appear in the API, we will let you know.`},
       b.addEventListener("click", function () {
         var t = document.getElementById(b.dataset.copy);
         if (t) copy(t.textContent, b);
-      });
-    });
-    mainEl.querySelectorAll(".qa-link").forEach(function (b) {
-      b.addEventListener("click", function (ev) {
-        ev.preventDefault();
-        if (editMode) return;
-        copy(absLink(b.dataset.link), b);
       });
     });
     mainEl.querySelectorAll(".qa-copy").forEach(function (b) {
