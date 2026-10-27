@@ -477,6 +477,41 @@ async function searchTitles(page, q) {
     }
   });
 
+  await check("Incident Management: как проверить, на нашей ли стороне проблема — дашборд, вкладки, пример, 3 скриншота", async () => {
+    await go("#/doc-incidents");
+    const r = await page.evaluate(() => {
+      const hs = [...document.querySelectorAll("#content h3")];
+      const i = hs.findIndex((x) => /на нашей ли стороне проблема/.test(x.textContent));
+      const j = hs.findIndex((x) => /Как заметить производственный инцидент/.test(x.textContent));
+      if (i < 0) return { i, j };
+      let t = "", imgs = [], links = [];
+      for (let n = hs[i].nextElementSibling; n && !/^H[1-3]$/.test(n.tagName); n = n.nextElementSibling) {
+        t += n.textContent + " ";
+        n.querySelectorAll("img").forEach((x) => imgs.push(x));
+        n.querySelectorAll("a").forEach((x) => links.push(x.href));
+      }
+      imgs.forEach((x) => x.scrollIntoView());
+      return { i, j, t, links, srcs: imgs.map((x) => x.getAttribute("src")) };
+    });
+    assert.ok(r.i >= 0 && r.i === r.j + 1, "раздела нет или он не сразу после «Как заметить…»: " + r.i + "/" + r.j);
+    for (const s of ["Availability", "k8s_nodes", "k8s number of replicas", "26.02.2026", "production-backoffice-fr-80@kubernetes"])
+      assert.ok(r.t.indexOf(s) >= 0, "нет: " + s);
+    assert.ok(r.links.some((u) => /grafana\.prod\.agg\.bet\/d\/b484c7e4-324f-45ff-96eb-c1e9912f0ca1\/service-availability/.test(u)), "нет ссылки на дашборд");
+    assert.strictEqual(r.srcs.length, 3, "скриншотов: " + r.srcs.length);
+    await page.waitForTimeout(800);
+    for (const s of r.srcs) assert.ok(await page.$eval('img[src="' + s + '"]', (i) => i.complete && i.naturalWidth > 0), "не загрузилась " + s);
+  });
+
+  await check("поиск: «k8s number of replicas» и «на нашей стороне» находят Incident Management", async () => {
+    await go("#/b2b");
+    for (const q of ["k8s number of replicas", "на нашей стороне"]) {
+      await page.fill("#search", q);
+      await page.waitForTimeout(250);
+      const t = await page.$$eval("#results .res .t", (e) => e.map((x) => x.textContent));
+      assert.ok(t.some((x) => /Incident Management/.test(x)), q + ": " + t.slice(0, 8).join(" | "));
+    }
+  });
+
   await check("на сайте нет ошибок JavaScript", async () => {
     assert.deepStrictEqual(errors, []);
   });
