@@ -599,6 +599,46 @@ async function searchTitles(page, q) {
     for (const s of r.srcs) assert.ok(await page.$eval('img[src="' + s + '"]', (i) => i.complete && i.naturalWidth > 0), "не загрузилась " + s);
   });
 
+  await check("HOME: кнопка ведёт на #/home, там главная с разделами «Зачем нужен агрегатор» и «Как это работает»", async () => {
+    await go("#/faq");
+    assert.strictEqual(await page.$eval(".home-tab", (a) => a.getAttribute("href")), "#/home");
+    await page.click(".home-tab");
+    await page.waitForTimeout(400);
+    assert.ok(/#\/home$/.test(page.url()), page.url());
+    const r = await page.evaluate(() => ({
+      h2: [...document.querySelectorAll("#content h2")].map((x) => x.textContent),
+      text: document.querySelector("#content").textContent,
+      active: (document.querySelector(".tab.active") || {}).className || "",
+      side: [...document.querySelectorAll(".side [data-doc-section] .p")].map((x) => x.textContent),
+      links: [...document.querySelectorAll("#content a")].map((a) => a.getAttribute("href"))
+    }));
+    assert.ok(r.h2.indexOf("Зачем нужен агрегатор") >= 0 && r.h2.indexOf("Как это работает") >= 0, r.h2.join(" | "));
+    assert.ok(/оператор \(B2B\) и провайдер интегрируются только с ним, по одному API/.test(r.text), "нет текста про агрегатор");
+    assert.ok(/белые списки IP и отчёты/.test(r.text), "нет текста «Как это работает»");
+    assert.ok(/home-tab/.test(r.active), "HOME не подсвечен как активный: " + r.active);
+    assert.ok(r.side.indexOf("Зачем нужен агрегатор") >= 0, "нет содержания слева");
+    for (const t of ["#/b2b", "#/doc-backoffice", "#/faq-slack"]) assert.ok(r.links.indexOf(t) >= 0, "нет ссылки на раздел " + t);
+  });
+
+  await check("HOME: сайт без адреса открывает главную", async () => {
+    await page.goto(URL);
+    await page.waitForTimeout(400);
+    const h2 = await page.$$eval("#content h2", (e) => e.map((x) => x.textContent));
+    assert.ok(h2.indexOf("Зачем нужен агрегатор") >= 0, h2.join(" | "));
+  });
+
+  await check("поиск: «зачем нужен агрегатор» находит главную HOME и ведёт на неё", async () => {
+    await go("#/b2b");
+    await page.fill("#search", "зачем нужен агрегатор");
+    await page.waitForTimeout(250);
+    const t = await page.$$eval("#results .res .t", (e) => e.map((x) => x.textContent));
+    const i = t.findIndex((x) => /HOME/.test(x));
+    assert.ok(i >= 0, t.join(" | "));
+    await page.click("#results .res:nth-of-type(" + (i + 1) + ")");
+    await page.waitForTimeout(300);
+    assert.ok(/#\/home$/.test(page.url()), page.url());
+  });
+
   await check("на сайте нет ошибок JavaScript", async () => {
     assert.deepStrictEqual(errors, []);
   });
