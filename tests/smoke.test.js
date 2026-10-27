@@ -285,6 +285,7 @@ async function searchTitles(page, q) {
       assert.ok(r.links.indexOf(u) >= 0, "нет ссылки " + u);
     }
     assert.ok(/Winfinity/.test(r.text) && /Mancala/.test(r.text) && /брендинг/.test(r.text), r.text.slice(0, 200));
+    assert.strictEqual(await page.$eval("#content .doc-body > .md-panel-warning .md-panel-title", (e) => e.textContent), "Новые адреса Бэк-офиса");
   });
 
   await check("старого адреса БО fr.agg.bet больше нет", async () => {
