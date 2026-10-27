@@ -1516,10 +1516,19 @@ If new parameters or features appear in the API, we will let you know.`},
     return h + "</div>";
   }
 
+  /* "file + sources + download button" box used by FAQ pages and documents */
+  function fileBox(file, label, sources) {
+    var info = [], btn = "";
+    if (file) {
+      info.push("<span>Файл: <code>" + esc(file.name) + "</code></span>");
+      btn = '<a class="file-download" href="' + attr(file.href) + '" download="' + attr(file.download || "") + '">' + esc(label || "Скачать PDF") + "</a>";
+    }
+    if (sources) info.push(sources);
+    if (!info.length) return "";
+    return '<div class="file-download-box"><div class="file-download-info">' + info.join(" · ") + "</div>" + btn + "</div>";
+  }
   function faqFileBox(blk) {
-    if (!blk.file) return "";
-    return '<div class="file-download-box"><div class="file-download-info"><span>Файл: <code>' + esc(blk.fileName || blk.file) + '</code></span></div>' +
-      '<a class="file-download" href="' + attr(blk.file) + '" download="' + attr(blk.fileName || "") + '">Скачать PDF</a></div>';
+    return blk.file ? fileBox({ name: blk.fileName || blk.file, href: blk.file, download: blk.fileName }) : "";
   }
   function qaItem(cat, blk, pr, i) {
     var extra = "";
@@ -1542,10 +1551,12 @@ If new parameters or features appear in the API, we will let you know.`},
       h += '<div class="src-head"><h3>' + esc(blk.title) + '</h3><span class="sp ' + esc(blk.space) + '">' + esc(blk.space) + "</span>" +
         '<span style="color:var(--muted);font-size:12.5px">' + blk.pairs.length + " вопр.</span>" +
         '<a style="margin-left:auto;font-size:12.5px" href="' + attr(blk.url) + '" target="_blank" rel="noopener">Открыть в Confluence ↗</a></div>';
-      h += faqFileBox(blk);
-      blk.pairs.forEach(function (pr, i) { h += qaItem(cat, blk, pr, i); });
+      h += faqBlockBody(cat, blk);
     });
     return h;
+  }
+  function faqBlockBody(cat, blk) {
+    return faqFileBox(blk) + blk.pairs.map(function (pr, i) { return qaItem(cat, blk, pr, i); }).join("");
   }
 
   function faqPage(cat, pageId) {
@@ -1555,9 +1566,7 @@ If new parameters or features appear in the API, we will let you know.`},
     var h = '<div class="crumbs"><a href="#/faq">FAQ</a> / <a href="#/faq/' + cat.id + '">' + esc(cat.title) + "</a> / " + esc(blk.title) + "</div>";
     h += '<h1 class="cat-head">' + esc(blk.title) + '</h1><p class="cat-note">' + blk.pairs.length + " вопросов · источник: " +
       '<a href="' + attr(blk.url) + '" target="_blank" rel="noopener">Confluence (' + esc(blk.space) + ")</a></p>";
-    h += faqFileBox(blk);
-    blk.pairs.forEach(function (pr, i) { h += qaItem(cat, blk, pr, i); });
-    return h;
+    return h + faqBlockBody(cat, blk);
   }
 
   function refView(r) {
@@ -1596,21 +1605,12 @@ If new parameters or features appear in the API, we will let you know.`},
     return h+'</div></div>';
   }
   function docDownload(doc) {
-    var info = [];
-    var download = '';
-    if (doc.source) {
-      var href = doc.sourcePath || ('api_materials/' + encodeURIComponent(doc.source));
-      info.push('<span>Файл: <code>' + esc(doc.source) + '</code></span>');
-      download = '<a class="file-download" href="' + attr(href) + '" download="' + attr(doc.source) + '">' + esc(doc.downloadLabel || 'Скачать PDF') + '</a>';
-    }
-    if (doc.sourceLinks && doc.sourceLinks.length) {
-      var sourceLinks = doc.sourceLinks.map(function(src) { return '<a href="' + attr(src.url) + '" target="_blank" rel="noopener noreferrer">' + esc(src.title) + '</a>'; }).join(' · ');
-      info.push('<span>' + esc(doc.sourceLabel || 'Источники:') + ' ' + sourceLinks + '</span>');
-    } else if (doc.url) {
-      info.push('<span>Источник: <a href="' + attr(doc.url) + '" target="_blank" rel="noopener noreferrer">Confluence</a></span>');
-    }
-    if (!doc.source && !info.length) return '';
-    return '<div class="file-download-box"><div class="file-download-info">' + info.join(' · ') + '</div>' + download + '</div>';
+    var link = function (url, title) { return '<a href="' + attr(url) + '" target="_blank" rel="noopener noreferrer">' + esc(title) + "</a>"; };
+    var sources = doc.sourceLinks && doc.sourceLinks.length
+      ? "<span>" + esc(doc.sourceLabel || "Источники:") + " " + doc.sourceLinks.map(function (s) { return link(s.url, s.title); }).join(" · ") + "</span>"
+      : doc.url ? "<span>Источник: " + link(doc.url, "Confluence") + "</span>" : "";
+    var file = doc.source ? { name: doc.source, href: doc.sourcePath || "api_materials/" + encodeURIComponent(doc.source), download: doc.source } : null;
+    return fileBox(file, doc.downloadLabel, sources);
   }
   function docView(doc) { return '<div class="crumbs">Справочные материалы</div><h1 class="page">'+esc(doc.title)+'</h1>'+docDownload(doc)+'<div class="md doc-body">'+md(doc.content)+'</div>'; }
 
@@ -1620,7 +1620,7 @@ If new parameters or features appear in the API, we will let you know.`},
     h += '<div class="grp"><div class="grp-items">';
     FAQ.categories.forEach(function (cat) {
       var matches = !f || cat.title.toLowerCase().indexOf(f) >= 0 || cat.blocks.some(function (b) {
-        return b.pairs.some(function (p) { return (p.q + " " + p.a).toLowerCase().indexOf(f) >= 0; });
+        return b.pairs.some(function (p) { return tgMatches(p, f); });
       });
       if (!matches) return;
       h += '<button class="op-link' + (S.cat === cat.id && !S.page ? " active" : "") + '" data-nav="#/faq/' + cat.id + '">' +
