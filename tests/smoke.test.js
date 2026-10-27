@@ -160,6 +160,86 @@ async function searchTitles(page, q) {
     });
   }
 
+  await check("FAQ: категория показывает источники и вопросы, страница — крошки и ссылку на Confluence", async () => {
+    await go("#/faq/support");
+    assert.ok(await page.$$eval(".src-head", (e) => e.length) >= 2, "мало источников");
+    assert.ok(await page.$$eval("details.qa", (e) => e.length) >= 5, "мало вопросов");
+    await go("#/faq/support/1331691558");
+    const crumbs = await page.$eval(".crumbs", (e) => e.textContent);
+    assert.ok(/FAQ \/ Support \/ /.test(crumbs), crumbs);
+    assert.strictEqual(await page.$$eval("details.qa", (e) => e.length), 4);
+    assert.ok(await page.$eval(".cat-note a", (a) => /atlassian\.net/.test(a.href)), "нет ссылки на Confluence");
+  });
+
+  await check("FAQ: постоянная ссылка #/faq/<кат>/<стр>/<n> раскрывает вопрос", async () => {
+    await go("#/faq/support/1331691558/2");
+    const id = await page.$eval("details.qa[open]", (e) => e.id);
+    assert.strictEqual(id, "qa-1331691558-2");
+  });
+
+  await check("FAQ: у страницы с PDF есть кнопка «Скачать PDF» на файл", async () => {
+    await go("#/faq/support/winfinity-localization");
+    const a = await page.$eval(".file-download-box a.file-download", (a) => [a.textContent, a.getAttribute("href")]);
+    assert.strictEqual(a[0], "Скачать PDF");
+    assert.ok(/Winfinity_Blocked_Territories/.test(a[1]), a[1]);
+  });
+
+  await check("FAQ: фильтр в боковой панели оставляет только подходящие категории", async () => {
+    await go("#/faq");
+    const all = await page.$$eval(".side .op-link", (e) => e.length);
+    await page.fill("#faq-filter", "KIDR");
+    await page.waitForTimeout(200);
+    const n = await page.$$eval(".side .op-link", (e) => e.length);
+    assert.ok(n >= 1 && n < all, all + " -> " + n);
+    assert.strictEqual(await page.$eval("#faq-filter", (e) => e === document.activeElement), true, "фокус потерян");
+  });
+
+  await check("справочник #/ref/<стр> открывается со ссылкой на Confluence", async () => {
+    await go("#/ref/1506279677");
+    assert.strictEqual(await page.$eval("h1.cat-head", (e) => e.textContent), "Bonus campaign");
+    assert.ok(await page.$eval(".cat-note a", (a) => /atlassian\.net/.test(a.href)));
+  });
+
+  await check("FAQ TG: у ответа есть ссылки на источник в Telegram", async () => {
+    await go("#/faq-tg");
+    const n = await page.$$eval("details.qa .tg-src a", (e) => e.filter((a) => /telegram|t\.me/.test(a.href)).length);
+    assert.ok(n > 10, "ссылок: " + n);
+  });
+
+  await check("Postman: блок файла с кнопкой скачивания коллекции и источниками", async () => {
+    await go("#/doc-postman");
+    const a = await page.$eval(".file-download-box a.file-download", (a) => a.getAttribute("href"));
+    assert.ok(/SV\.postman_collection\.json$/.test(a), a);
+    assert.ok(await page.$$eval(".file-download-info a", (e) => e.length) >= 1, "нет ссылок на источники");
+  });
+
+  await check("Back Office: блок источников без кнопки скачивания", async () => {
+    await go("#/doc-backoffice");
+    assert.ok(await page.$(".file-download-box .file-download-info a"), "нет источников");
+    assert.strictEqual(await page.$(".file-download-box a.file-download"), null);
+  });
+
+  await check("документ: клик по разделу в содержании прокручивает к нему", async () => {
+    await go("#/doc-backoffice");
+    const btns = await page.$$(".side [data-doc-section]");
+    assert.ok(btns.length > 5);
+    await btns[5].click();
+    await page.waitForTimeout(1200);
+    const top = await page.$eval("#doc-backoffice-section-5", (e) => e.getBoundingClientRect().top);
+    assert.ok(top >= -5 && top < 200, "раздел не наверху: " + top);
+  });
+
+  await check("кнопка «Копировать» копирует текст ответа без служебных строк", async () => {
+    await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+    await go("#/faq-slack/access/0");
+    await page.reload();
+    await page.waitForTimeout(400);
+    await page.$eval("details.qa[open] .qa-copy", (b) => { b.scrollIntoView({ block: "center" }); b.click(); });
+    await page.waitForTimeout(200);
+    const t = await page.evaluate(() => navigator.clipboard.readText());
+    assert.ok(t.length > 20 && !/Источник в Slack/.test(t) && !/Копировать/.test(t), t.slice(0, 80));
+  });
+
   await check("на сайте нет ошибок JavaScript", async () => {
     assert.deepStrictEqual(errors, []);
   });
