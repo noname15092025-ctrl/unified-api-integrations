@@ -512,6 +512,35 @@ async function searchTitles(page, q) {
     }
   });
 
+  await check("TVBet: поиск Consume через TraceQL {.producer_trace_id=…} со скриншотом", async () => {
+    await go("#/ref/1557659744");
+    const r = await page.evaluate(() => {
+      const h = [...document.querySelectorAll("#content h4")].find((x) => /Как это вс[её] и[cс]кать в графане/.test(x.textContent));
+      if (!h) return null;
+      let t = "", imgs = [];
+      for (let n = h.nextElementSibling; n && !/^H[1-4]$/.test(n.tagName) && !n.classList.contains("doc-sources"); n = n.nextElementSibling) {
+        t += n.textContent + " ";
+        n.querySelectorAll("img").forEach((x) => imgs.push(x));
+      }
+      const last = imgs[imgs.length - 1];
+      if (last) last.scrollIntoView();
+      return { t, last: last && last.getAttribute("src") };
+    });
+    assert.ok(r, "нет раздела «Как это всё искать в графане»");
+    assert.ok(/\{\.producer_trace_id="[^"]*"\}/.test(r.t) && /TraceQL/.test(r.t) && /make-list/.test(r.t) && /accept/.test(r.t), r.t.slice(-400));
+    assert.ok(/tvbet-traceql/.test(r.last || ""), "нет нового скриншота: " + r.last);
+    await page.waitForTimeout(800);
+    assert.ok(await page.$eval('img[src="' + r.last + '"]', (i) => i.complete && i.naturalWidth > 0), "не загрузилась");
+  });
+
+  await check("поиск: «producer_trace_id» находит страницу TVBet", async () => {
+    await go("#/b2b");
+    await page.fill("#search", "producer_trace_id");
+    await page.waitForTimeout(250);
+    const t = await page.$$eval("#results .res .t", (e) => e.map((x) => x.textContent));
+    assert.ok(t.some((x) => /TVBet/i.test(x)), t.join(" | "));
+  });
+
   await check("на сайте нет ошибок JavaScript", async () => {
     assert.deepStrictEqual(errors, []);
   });
