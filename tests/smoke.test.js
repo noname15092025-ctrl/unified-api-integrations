@@ -372,6 +372,44 @@ async function searchTitles(page, q) {
     }
   });
 
+  await check("TestOps: перед «Как проверить провайдера» раздел с тем, что запросить у B2B (WinfinityMock, vendor_id, 3 игры, копирование)", async () => {
+    await go("#/doc-testops");
+    const r = await page.evaluate(() => {
+      const hs = [...document.querySelectorAll("#content h2")].map((x) => x.textContent);
+      const i = hs.findIndex((t) => /Что запросить у B2B перед тестированием/.test(t)), j = hs.findIndex((t) => /Как проверить провайдера/.test(t));
+      const h = document.querySelectorAll("#content h2")[i];
+      let t = "", copy = false;
+      for (let n = h && h.nextElementSibling; n && n.tagName !== "H2"; n = n.nextElementSibling) {
+        t += n.textContent + " ";
+        copy = copy || !!n.querySelector("pre.code") && !!n.querySelector("button.copy");
+      }
+      return { i, j, t, copy };
+    });
+    assert.ok(r.i >= 0 && r.i < r.j, "раздела нет или он не перед «Как проверить провайдера»: " + r.i + "/" + r.j);
+    for (const s of ["WinfinityMock", "8f3d22d6-591f-11ed-9b6a-0242ac120003", "f44b6bf2-f4c8-4510-ab80-0677dc9c42dc",
+      "812b33a9-585b-4fe4-9ba6-4839295b0b90", "c3a3e4ec-1abe-48ad-9b85-7bcd8b2e6567", "test account"]) {
+      assert.ok(r.t.indexOf(s) >= 0, "нет: " + s);
+    }
+    assert.ok(r.copy, "текст для B2B не в блоке с кнопкой «Копировать»");
+    const overlap = await page.evaluate(() => {
+      const pre = [...document.querySelectorAll("#content pre.code")].find((x) => /WinfinityMock/.test(x.textContent));
+      const btn = pre.parentElement.querySelector("button.copy").getBoundingClientRect();
+      const range = document.createRange();
+      const tn = pre.firstChild;
+      range.setStart(tn, 0); range.setEnd(tn, tn.data.indexOf("\n") > 0 ? tn.data.indexOf("\n") : tn.data.length);
+      return [...range.getClientRects()].some((r) => r.right > btn.left && r.left < btn.right && r.bottom > btn.top && r.top < btn.bottom);
+    });
+    assert.strictEqual(overlap, false, "кнопка «Копировать» перекрывает текст");
+  });
+
+  await check("поиск: «WinfinityMock» находит TestOps", async () => {
+    await go("#/b2b");
+    await page.fill("#search", "WinfinityMock");
+    await page.waitForTimeout(250);
+    const t = await page.$$eval("#results .res .t", (e) => e.map((x) => x.textContent));
+    assert.ok(t.some((x) => /TestOps/.test(x)), t.join(" | "));
+  });
+
   await check("на сайте нет ошибок JavaScript", async () => {
     assert.deepStrictEqual(errors, []);
   });
