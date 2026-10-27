@@ -1642,17 +1642,18 @@ If new parameters or features appear in the API, we will let you know.`},
   /* ---------------------------------------------------------- FAQ TG */
   function tgMatches(it, f) { return !f || (it.q + " " + it.a).toLowerCase().indexOf(f) >= 0; }
 
-  function renderSideTg(filter) {
+  /* topic sidebar shared by FAQ TG and FAQ Slack: filter box, "all" link and one link per non-empty topic */
+  function renderSideTopics(list, topics, base, inputId, filter) {
     var f = (filter || "").toLowerCase();
-    var h = '<div class="side-search"><input id="tg-filter" placeholder="Фильтр по вопросам…" value="' + attr(filter || "") + '"></div>';
+    var h = '<div class="side-search"><input id="' + inputId + '" placeholder="Фильтр по вопросам…" value="' + attr(filter || "") + '"></div>';
     h += '<div class="grp"><div class="grp-items">';
-    var all = TG_FAQ.filter(function (it) { return tgMatches(it, f); }).length;
-    h += '<button class="op-link' + (!S.cat ? " active" : "") + '" data-nav="#/faq-tg"><span class="p">Все вопросы <span style="color:var(--muted)">' + all + "</span></span></button>";
-    Object.keys(TG_TOPICS).forEach(function (k) {
-      var n = TG_FAQ.filter(function (it) { return it.t === k && tgMatches(it, f); }).length;
+    var all = list.filter(function (it) { return tgMatches(it, f); }).length;
+    h += '<button class="op-link' + (!S.cat ? " active" : "") + '" data-nav="' + base + '"><span class="p">Все вопросы <span style="color:var(--muted)">' + all + "</span></span></button>";
+    Object.keys(topics).forEach(function (k) {
+      var n = list.filter(function (it) { return it.t === k && tgMatches(it, f); }).length;
       if (!n) return;
-      h += '<button class="op-link' + (S.cat === k ? " active" : "") + '" data-nav="#/faq-tg/' + k + '">' +
-        '<span class="p">' + esc(TG_TOPICS[k]) + ' <span style="color:var(--muted)">' + n + "</span></span></button>";
+      h += '<button class="op-link' + (S.cat === k ? " active" : "") + '" data-nav="' + base + "/" + k + '">' +
+        '<span class="p">' + esc(topics[k]) + ' <span style="color:var(--muted)">' + n + "</span></span></button>";
     });
     return h + "</div></div>";
   }
@@ -1704,20 +1705,6 @@ If new parameters or features appear in the API, we will let you know.`},
 
   /* ---------------------------------------------------------- FAQ Slack */
   var SL_CH = { "devops-issuer": "#devops-issuer", "agg_analytics_questions": "#agg_analytics_questions" };
-  function renderSideSl(filter) {
-    var f = (filter || "").toLowerCase();
-    var h = '<div class="side-search"><input id="sl-filter" placeholder="Фильтр по вопросам…" value="' + attr(filter || "") + '"></div>';
-    h += '<div class="grp"><div class="grp-items">';
-    var all = SL_FAQ.filter(function (it) { return tgMatches(it, f); }).length;
-    h += '<button class="op-link' + (!S.cat ? " active" : "") + '" data-nav="#/faq-slack"><span class="p">Все вопросы <span style="color:var(--muted)">' + all + "</span></span></button>";
-    Object.keys(SL_TOPICS).forEach(function (k) {
-      var n = SL_FAQ.filter(function (it) { return it.t === k && tgMatches(it, f); }).length;
-      if (!n) return;
-      h += '<button class="op-link' + (S.cat === k ? " active" : "") + '" data-nav="#/faq-slack/' + k + '">' +
-        '<span class="p">' + esc(SL_TOPICS[k]) + ' <span style="color:var(--muted)">' + n + "</span></span></button>";
-    });
-    return h + "</div></div>";
-  }
   function slView(filter) {
     var f = (filter || "").toLowerCase();
     var h = '<div class="crumbs"><a href="#/faq-slack">FAQ Slack</a>' + (S.cat ? " / " + esc(SL_TOPICS[S.cat]) : "") + "</div>";
@@ -1955,11 +1942,11 @@ If new parameters or features appear in the API, we will let you know.`},
       var hs=mainEl.querySelectorAll(".md h1,.md h2,.md h3,.md h4");
       Array.prototype.forEach.call(hs,function(h,i){h.id=docPage.key+"-section-"+i;});
     } else if (S.tab === "faq-slack") {
-      sideEl.innerHTML = renderSideSl(S.sq || "");
+      sideEl.innerHTML = renderSideTopics(SL_FAQ, SL_TOPICS, "#/faq-slack", "sl-filter", S.sq || "");
       mainEl.innerHTML = slView(S.sq || "");
       slGloss(mainEl);
     } else if (S.tab === "faq-tg") {
-      sideEl.innerHTML = renderSideTg(S.tq || "");
+      sideEl.innerHTML = renderSideTopics(TG_FAQ, TG_TOPICS, "#/faq-tg", "tg-filter", S.tq || "");
       mainEl.innerHTML = tgView(S.tq || "");
     } else if (S.tab === "faq") {
       sideEl.innerHTML = renderSideFaq(S.fq || "");
@@ -2027,26 +2014,18 @@ If new parameters or features appear in the API, we will let you know.`},
         if (nf) { nf.focus(); nf.setSelectionRange(pos, pos); }
       });
     }
-    var sf = document.getElementById("sl-filter");
-    if (sf) {
-      sf.addEventListener("input", function () {
-        S.sq = sf.value;
-        var pos = sf.selectionStart;
+    /* sidebar filters: typing re-renders the page, then focus and caret go back into the same box */
+    [["sl-filter", "sq"], ["tg-filter", "tq"]].forEach(function (fk) {
+      var el = document.getElementById(fk[0]);
+      if (!el) return;
+      el.addEventListener("input", function () {
+        S[fk[1]] = el.value;
+        var pos = el.selectionStart;
         render();
-        var nf = document.getElementById("sl-filter");
+        var nf = document.getElementById(fk[0]);
         if (nf) { nf.focus(); nf.setSelectionRange(pos, pos); }
       });
-    }
-    var tf = document.getElementById("tg-filter");
-    if (tf) {
-      tf.addEventListener("input", function () {
-        S.tq = tf.value;
-        var pos = tf.selectionStart;
-        render();
-        var nf = document.getElementById("tg-filter");
-        if (nf) { nf.focus(); nf.setSelectionRange(pos, pos); }
-      });
-    }
+    });
     sideEl.querySelectorAll("[data-uid]").forEach(function (b) {
       b.addEventListener("click", function () { nav("#/" + S.api + "/" + encodeURIComponent(b.dataset.uid)); });
     });
