@@ -338,6 +338,40 @@ async function searchTitles(page, q) {
     });
   }
 
+  await check("Back Office: раздел «Замена API key для B2B» с путём, ошибкой, предупреждением и скриншотом", async () => {
+    await go("#/doc-backoffice");
+    const side = await page.$$eval(".side [data-doc-section] .p", (e) => e.map((x) => x.textContent));
+    assert.ok(side.some((t) => /Замена API key для B2B/.test(t)), "нет пункта в содержании");
+    const sec = await page.evaluate(() => {
+      const h = [...document.querySelectorAll("#content h1, #content h2")].find((x) => /Замена API key для B2B/.test(x.textContent));
+      if (!h) return null;
+      let t = "", img = null, warn = false;
+      for (let n = h.nextElementSibling; n && !/^H[12]$/.test(n.tagName); n = n.nextElementSibling) {
+        t += n.textContent + " ";
+        img = img || n.querySelector("img");
+        warn = warn || (n.classList.contains("md-panel-warning") && /Важно/.test(n.textContent) && /переспросите/.test(n.textContent));
+      }
+      if (img) img.scrollIntoView();
+      return { t, warn, src: img && img.getAttribute("src") };
+    });
+    assert.ok(sec, "нет раздела");
+    assert.ok(/b2b apikey is invalid/.test(sec.t) && /COMPANY MANAGEMENT/.test(sec.t) && /Company hierarchy/.test(sec.t) &&
+      /Edit item/.test(sec.t) && /Regenerate API key/.test(sec.t), sec.t.slice(0, 200));
+    assert.ok(sec.warn, "нет выделенного предупреждения «Важно» про переспросить B2B");
+    await page.waitForTimeout(800);
+    assert.ok(sec.src && await page.$eval('img[src="' + sec.src + '"]', (i) => i.complete && i.naturalWidth > 0), "картинка не загрузилась");
+  });
+
+  await check("поиск: «apikey is invalid» и «замена api key» находят раздел Back Office", async () => {
+    await go("#/b2b");
+    for (const q of ["apikey is invalid", "замена api key"]) {
+      await page.fill("#search", q);
+      await page.waitForTimeout(250);
+      const t = await page.$$eval("#results .res .t", (e) => e.map((x) => x.textContent));
+      assert.ok(t.some((x) => /Back Office/.test(x)), q + ": " + t.slice(0, 8).join(" | "));
+    }
+  });
+
   await check("на сайте нет ошибок JavaScript", async () => {
     assert.deepStrictEqual(errors, []);
   });
