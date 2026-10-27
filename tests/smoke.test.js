@@ -434,6 +434,49 @@ async function searchTitles(page, q) {
     assert.ok(t.some((x) => /TestOps/.test(x)), t.join(" | "));
   });
 
+  await check("Back Office: раздел «Открыть игры на весь B2B Root» перед Whitelist / Blacklist, с шагами и двумя скриншотами", async () => {
+    await go("#/doc-backoffice");
+    const r = await page.evaluate(() => {
+      const hs = [...document.querySelectorAll("#content h2")];
+      const i = hs.findIndex((x) => /Открыть игры на весь B2B Root/.test(x.textContent));
+      const j = hs.findIndex((x) => /Whitelist \/ Blacklist игр/.test(x.textContent));
+      if (i < 0) return { i, j };
+      let t = "", imgs = [];
+      for (let n = hs[i].nextElementSibling; n && n.tagName !== "H2" && n.tagName !== "H1"; n = n.nextElementSibling) {
+        t += n.textContent + " ";
+        n.querySelectorAll("img").forEach((x) => imgs.push(x));
+      }
+      imgs.forEach((x) => x.scrollIntoView());
+      return { i, j, t, srcs: imgs.map((x) => x.getAttribute("src")) };
+    });
+    assert.ok(r.i >= 0 && r.i === r.j - 1, "раздела нет или он не прямо перед Whitelist / Blacklist: " + r.i + "/" + r.j);
+    assert.ok(/Games/.test(r.t) && /Add to B2B/.test(r.t) && /Add game/.test(r.t) && /всех проектах|все проекты/.test(r.t) && /Black list/.test(r.t), r.t.slice(0, 300));
+    assert.strictEqual(r.srcs.length, 2, "скриншотов: " + r.srcs.length);
+    await page.waitForTimeout(800);
+    for (const s of r.srcs) assert.ok(await page.$eval('img[src="' + s + '"]', (i) => i.complete && i.naturalWidth > 0), "не загрузилась " + s);
+  });
+
+  await check("Back Office: в «Добавить игры на проекты» подсказка про новый способ через AGG", async () => {
+    await go("#/doc-backoffice");
+    const t = await page.evaluate(() => {
+      const h = [...document.querySelectorAll("#content h2")].find((x) => /Добавить игры на проекты/.test(x.textContent));
+      let t = "";
+      for (let n = h.nextElementSibling; n && n.tagName !== "H2" && n.tagName !== "H1"; n = n.nextElementSibling) if (n.classList.contains("md-panel")) t += n.textContent;
+      return t;
+    });
+    assert.ok(/Add to B2B/.test(t) && /Открыть игры на весь B2B Root/.test(t), t.slice(0, 200));
+  });
+
+  await check("поиск: «add to b2b» и «открыть игры» находят Back Office", async () => {
+    await go("#/b2b");
+    for (const q of ["add to b2b", "открыть игры на весь"]) {
+      await page.fill("#search", q);
+      await page.waitForTimeout(250);
+      const t = await page.$$eval("#results .res .t", (e) => e.map((x) => x.textContent));
+      assert.ok(t.some((x) => /Back Office/.test(x)), q + ": " + t.slice(0, 8).join(" | "));
+    }
+  });
+
   await check("на сайте нет ошибок JavaScript", async () => {
     assert.deepStrictEqual(errors, []);
   });
