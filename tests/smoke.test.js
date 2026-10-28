@@ -799,21 +799,72 @@ async function searchTitles(page, q) {
   await check("Креды б2б. Сайты: таблица кредов зашифрована, в файле нет открытых логинов и паролей", async () => {
     const html = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
     assert.ok(!/\| *Login *\/ *Username *\| *Password *\|/.test(html), "в файле осталась открытая таблица Login / Password");
+    assert.ok(!/support123/.test(html), "пароль поддержки присутствует в файле портала");
     await go("#/ref/1446707256");
-    assert.ok(await page.$("#content .cred-lock input[type=password]"), "нет поля пароля");
-    await page.fill("#content .cred-lock input[type=password]", "wrong-password");
-    await page.click("#content .cred-lock button");
-    await page.waitForTimeout(2500);
-    assert.ok(/Неверный пароль/.test(await page.$eval("#content .cred-lock", (e) => e.textContent)), "нет сообщения о неверном пароле");
-    assert.strictEqual(await page.$$eval("#content .cred-lock table", (e) => e.length), 0, "таблица показалась с неверным паролем");
+    assert.strictEqual(await page.$$eval("#content .cred-lock input", (e) => e.length), 0, "внутри блока осталось поле ввода пароля");
+    assert.ok(await page.$("#support-login"), "нет кнопки входа в шапке");
+    assert.strictEqual(await page.$$eval("#content .cred-lock table", (e) => e.length), 0, "таблица видна без входа");
   });
 
-  await check("Креды б2б. Сайты: правильный пароль поддержки открывает таблицу со всеми кредами и trexbet", async () => {
+  const LOCKED_PAGES = ["#/ref/1446707256", "#/ref/1158250641", "#/doc-testops", "#/doc-postman", "#/ref/402817136"];
+  await check("зашифрованные блоки с кредами есть на всех страницах с секретами", async () => {
+    for (const h of LOCKED_PAGES) {
+      await go(h);
+      const n = await page.$$eval("#content .cred-lock[data-lock]", (e) => e.length);
+      assert.ok(n >= 1, "нет зашифрованного блока: " + h);
+    }
+  });
+
+  await check("неверный пароль в форме входа не открывает блоки", async () => {
+    await go("#/ref/1446707256");
+    await page.click("#support-login");
+    await page.fill("#support-pw", "wrong-password");
+    await page.press("#support-pw", "Enter");
+    await page.waitForTimeout(2000);
+    assert.ok(/Неверный пароль/.test(await page.$eval(".support-pop", (e) => e.textContent)), "нет сообщения о неверном пароле");
+    assert.strictEqual(await page.$$eval("#content .cred-lock table", (e) => e.length), 0, "таблица открылась с неверным паролем");
+  });
+
+  await check("вход по паролю один раз открывает блоки на всех страницах, переживает переход и перезагрузку, выход снова скрывает", async () => {
+    const pw = process.env.SUPPORT_PW;
+    if (!pw) return console.log("    (пропущено: нет SUPPORT_PW)");
+    await page.evaluate(() => { try { sessionStorage.clear(); } catch (e) {} });
+    await go(LOCKED_PAGES[1]);
+    await page.click("#support-login");
+    await page.fill("#support-pw", pw);
+    await page.press("#support-pw", "Enter");
+    await page.waitForTimeout(2500);
+    const opened = (h) => page.$$eval("#content .cred-lock[data-lock]", (e) => e.map((x) => x.querySelector(".cred-out").textContent.length));
+    for (const h of LOCKED_PAGES) {
+      await go(h);
+      await page.waitForTimeout(2500);
+      const r = await opened(h);
+      assert.ok(r.length && r.every((n) => n > 50), "не открылся блок (после входа) на " + h + ": " + JSON.stringify(r));
+    }
+    // входа больше не просят — поле ввода не появляется
+    assert.strictEqual(await page.$$eval("#content .cred-lock input", (e) => e.length), 0, "снова просит пароль");
+    // переживает перезагрузку
+    await page.reload();
+    await page.waitForTimeout(2500);
+    const r2 = await opened("после reload");
+    assert.ok(r2.length && r2.every((n) => n > 50), "после перезагрузки блок снова закрыт: " + JSON.stringify(r2));
+    // кнопка показывает, что вход выполнен, и позволяет выйти
+    assert.ok(/Поддержка|Выйти|✓/.test(await page.$eval("#support-login", (e) => e.textContent)), "кнопка не показывает вход");
+    await page.click("#support-login");
+    await page.click(".support-pop .support-logout");
+    await page.waitForTimeout(500);
+    assert.strictEqual(await page.$$eval("#content .cred-lock table", (e) => e.length), 0, "после выхода таблица осталась видимой");
+    const stored = await page.evaluate(() => { try { return sessionStorage.getItem("portal-support"); } catch (e) { return "err"; } });
+    assert.ok(!stored, "после выхода пароль остался в sessionStorage");
+  });
+
+  await check("правильный пароль открывает таблицу Креды с trexbet и без заглушек", async () => {
     const pw = process.env.SUPPORT_PW;
     if (!pw) return console.log("    (пропущено: нет SUPPORT_PW)");
     await go("#/ref/1446707256");
-    await page.fill("#content .cred-lock input[type=password]", pw);
-    await page.press("#content .cred-lock input[type=password]", "Enter");
+    await page.click("#support-login");
+    await page.fill("#support-pw", pw);
+    await page.press("#support-pw", "Enter");
     await page.waitForTimeout(2500);
     const r = await page.evaluate(() => {
       const t = document.querySelector("#content .cred-lock table");
@@ -827,31 +878,6 @@ async function searchTitles(page, q) {
     assert.ok(r.n >= 60, "строк: " + r.n);
     assert.strictEqual(r.masked, 0, "в расшифрованной таблице остались заглушки");
     assert.ok(r.trex && r.trex[1] && r.trex[2] && !/не публикуется/.test(r.trex[1]), "нет кредов trexbet");
-  });
-
-  const LOCKED_PAGES = ["#/ref/1446707256", "#/ref/1158250641", "#/doc-testops", "#/doc-postman", "#/ref/402817136"];
-  await check("зашифрованные блоки с кредами есть на всех страницах с секретами", async () => {
-    for (const h of LOCKED_PAGES) {
-      await go(h);
-      const n = await page.$$eval("#content .cred-lock[data-lock]", (e) => e.length);
-      assert.ok(n >= 1, "нет зашифрованного блока: " + h);
-    }
-  });
-
-  await check("пароль поддержки вводится один раз и открывает зашифрованные блоки на всех страницах", async () => {
-    const pw = process.env.SUPPORT_PW;
-    if (!pw) return console.log("    (пропущено: нет SUPPORT_PW)");
-    await page.reload();
-    await go(LOCKED_PAGES[1]);
-    await page.fill("#content .cred-lock input[type=password]", pw);
-    await page.press("#content .cred-lock input[type=password]", "Enter");
-    await page.waitForTimeout(3000);
-    for (const h of LOCKED_PAGES) {
-      await go(h);
-      await page.waitForTimeout(2500);
-      const r = await page.$$eval("#content .cred-lock[data-lock]", (e) => e.map((x) => ({ out: x.querySelector(".cred-out").textContent.length, msg: x.querySelector(".cred-msg").textContent })));
-      assert.ok(r.every((x) => x.out > 50), "не открылся блок на " + h + ": " + JSON.stringify(r));
-    }
   });
 
   await check("на сайте нет ошибок JavaScript", async () => {
