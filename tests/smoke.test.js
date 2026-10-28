@@ -807,7 +807,7 @@ async function searchTitles(page, q) {
     assert.ok(top >= -5 && top < 220, "ссылка не открыла раздел главной: " + top);
   });
 
-  const LOCKED_PAGES = ["#/ref/1446707256", "#/ref/1158250641", "#/doc-testops", "#/doc-postman", "#/ref/402817136"];
+  const LOCKED_PAGES = ["#/ref/1446707256"];
 
   await check("в файле портала нет открытых кредов и нет пароля", async () => {
     const html = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
@@ -815,11 +815,22 @@ async function searchTitles(page, q) {
     assert.ok(!/support123/.test(html), "пароль присутствует в файле портала");
   });
 
-  await check("зашифрованные блоки с кредами есть на всех страницах с секретами (после входа)", async () => {
-    for (const h of LOCKED_PAGES) {
+  await check("зашифрованный блок кредов есть только на странице «Креды б2б. Сайты»", async () => {
+    await go("#/ref/1446707256");
+    assert.ok(await page.$("#content .cred-lock[data-lock]"), "нет зашифрованного блока на странице кредов");
+  });
+
+  await check("TestOps, Postman, Тикетницы, [B2Bs] API URL — без зашифрованных блоков, с прежним содержимым", async () => {
+    const cases = [
+      ["#/doc-testops", "Что запросить у B2B"],
+      ["#/doc-postman", "Postman"],
+      ["#/ref/1158250641", "Тикетниц"],
+      ["#/ref/402817136", "URL"],
+    ];
+    for (const [h, must] of cases) {
       await go(h);
-      const n = await page.$$eval("#content .cred-lock[data-lock]", (e) => e.length);
-      assert.ok(n >= 1, "нет зашифрованного блока: " + h);
+      assert.strictEqual(await page.$$eval("#content .cred-lock[data-lock]", (e) => e.length), 0, "на " + h + " остался зашифрованный блок (свалка)");
+      assert.ok((await page.$eval("#content", (e) => e.textContent)).indexOf(must) >= 0, "на " + h + " нет прежнего содержимого: " + must);
     }
   });
 
