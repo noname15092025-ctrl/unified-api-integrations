@@ -796,6 +796,22 @@ async function searchTitles(page, q) {
     assert.ok(top >= -5 && top < 220, "ссылка не открыла раздел главной: " + top);
   });
 
+  await check("Креды б2б. Сайты: логины и пароли не публикуются (таблица замаскирована), есть trexbet.com и плашка", async () => {
+    await go("#/ref/1446707256");
+    const r = await page.evaluate(() => {
+      const t = document.querySelector("#content .md table");
+      const head = [...t.querySelectorAll("th")].map((x) => x.textContent.trim());
+      const li = head.findIndex((x) => /Login/i.test(x)), pi = head.findIndex((x) => /Password/i.test(x));
+      const rows = [...t.querySelectorAll("tbody tr")].map((tr) => [...tr.children].map((td) => td.textContent.trim()));
+      return { li, pi, rows, warn: document.querySelector("#content .md-panel-warning") && document.querySelector("#content .md-panel-warning").textContent };
+    });
+    assert.ok(r.li >= 0 && r.pi >= 0, "нет колонок Login / Password");
+    const bad = r.rows.filter((c) => !/не публикуется/.test(c[r.li]) || !/не публикуется/.test(c[r.pi]));
+    assert.strictEqual(bad.length, 0, "строк с открытыми кредами: " + bad.length);
+    assert.ok(r.rows.some((c) => /trexbet\.com/.test(c.join(" "))), "нет trexbet.com");
+    assert.ok(r.warn && /НЕ ПУБЛИКУЮТСЯ/.test(r.warn), "нет плашки «не публикуются»");
+  });
+
   await check("на сайте нет ошибок JavaScript", async () => {
     assert.deepStrictEqual(errors, []);
   });
