@@ -829,6 +829,31 @@ async function searchTitles(page, q) {
     assert.ok(r.trex && r.trex[1] && r.trex[2] && !/не публикуется/.test(r.trex[1]), "нет кредов trexbet");
   });
 
+  const LOCKED_PAGES = ["#/ref/1446707256", "#/ref/1158250641", "#/doc-testops", "#/doc-postman", "#/ref/402817136"];
+  await check("зашифрованные блоки с кредами есть на всех страницах с секретами", async () => {
+    for (const h of LOCKED_PAGES) {
+      await go(h);
+      const n = await page.$$eval("#content .cred-lock[data-lock]", (e) => e.length);
+      assert.ok(n >= 1, "нет зашифрованного блока: " + h);
+    }
+  });
+
+  await check("пароль поддержки вводится один раз и открывает зашифрованные блоки на всех страницах", async () => {
+    const pw = process.env.SUPPORT_PW;
+    if (!pw) return console.log("    (пропущено: нет SUPPORT_PW)");
+    await page.reload();
+    await go(LOCKED_PAGES[1]);
+    await page.fill("#content .cred-lock input[type=password]", pw);
+    await page.press("#content .cred-lock input[type=password]", "Enter");
+    await page.waitForTimeout(3000);
+    for (const h of LOCKED_PAGES) {
+      await go(h);
+      await page.waitForTimeout(2500);
+      const r = await page.$$eval("#content .cred-lock[data-lock]", (e) => e.map((x) => ({ out: x.querySelector(".cred-out").textContent.length, msg: x.querySelector(".cred-msg").textContent })));
+      assert.ok(r.every((x) => x.out > 50), "не открылся блок на " + h + ": " + JSON.stringify(r));
+    }
+  });
+
   await check("на сайте нет ошибок JavaScript", async () => {
     assert.deepStrictEqual(errors, []);
   });
