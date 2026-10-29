@@ -895,6 +895,15 @@ async function searchTitles(page, q) {
     await ctx.close();
   });
 
+  await check("FAQ Support: вопрос про round_id и несколько игроков, с ответом про разные сессии и ссылкой на Telegram", async () => {
+    await go("#/faq/support/1430454573");
+    const r = await page.evaluate(() => [...document.querySelectorAll("details.qa")].map((d) => ({ q: d.querySelector("summary").textContent, a: d.querySelector(".ans").textContent, links: [...d.querySelectorAll(".ans a")].map((x) => x.getAttribute("href")) })));
+    const qa = r.find((x) => /round_id/.test(x.q) && /игрок/i.test(x.q));
+    assert.ok(qa, "нет вопроса про round_id и игроков");
+    assert.ok(/разны[ех] сесси/i.test(qa.a) && /session/i.test(qa.a), "в ответе нет про разные сессии: " + qa.a.slice(0, 160));
+    assert.ok(qa.links.some((u) => /t\.me\/c\/2410761068\/1824/.test(u)), "нет ссылки на Telegram-вопрос");
+  });
+
   await check("на сайте нет ошибок JavaScript", async () => {
     assert.deepStrictEqual(errors, []);
   });
