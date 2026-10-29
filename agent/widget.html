@@ -55,12 +55,6 @@
 .aiw-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
 .aiw-chip{border:1px solid var(--line);background:var(--panel-2);color:var(--ink-2);border-radius:999px;padding:5px 10px;font-size:12px;cursor:pointer;line-height:1.2}
 .aiw-chip:hover{border-color:var(--accent);color:var(--accent)}
-.aiw-cfg{padding:12px 14px;border-bottom:1px solid var(--line);background:var(--panel-2);font-size:12.5px;color:var(--ink-2);line-height:1.5}
-.aiw-cfg label{display:block;font-weight:700;margin-bottom:5px;color:var(--ink)}
-.aiw-cfg input{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:12.5px;margin-bottom:8px;background:var(--panel)}
-.aiw-cfg .aiw-cfg-row{display:flex;gap:8px}
-.aiw-cfg button{border:none;border-radius:8px;padding:7px 12px;font:600 12.5px inherit;cursor:pointer}
-.aiw-cfg .ok{background:var(--accent);color:#fff}.aiw-cfg .no{background:var(--line-2);color:var(--ink-2)}
 @media (max-width:480px){.aiw-panel{right:0;bottom:0;width:100vw;height:100vh;border-radius:0}.aiw-launch{right:14px;bottom:14px}}
 </style>
 
@@ -73,21 +67,11 @@
   <div class="aiw-head">
     <span class="aiw-dot"></span>
     <div class="aiw-title">ИИ-ассистент портала<span>анализирует документацию API</span></div>
-    <button class="aiw-ico" id="aiw-cfg-btn" type="button" title="Настроить подключение">⚙</button>
     <button class="aiw-ico" id="aiw-close" type="button" title="Свернуть">✕</button>
   </div>
   <div class="aiw-note">
     <span>⚠️</span>
     <div><b>Ответы генерирует ИИ</b> по материалам портала. Всегда думайте своей головой и проверяйте по документации и у коллег.</div>
-  </div>
-  <div class="aiw-cfg" id="aiw-cfg" hidden>
-    <label for="aiw-cfg-url">URL воркера (Cloudflare)</label>
-    <input id="aiw-cfg-url" type="url" placeholder="https://api-portal-agent.xxx.workers.dev" autocomplete="off">
-    <div class="aiw-cfg-row">
-      <button class="ok" id="aiw-cfg-save" type="button">Сохранить</button>
-      <button class="no" id="aiw-cfg-cancel" type="button">Отмена</button>
-    </div>
-    <div style="margin-top:8px;color:var(--muted)">Сохранится только в этом браузере. Чтобы агент работал у всех — впишите URL в <code>AGENT_ENDPOINT</code> в index.html. Инструкция: <code>agent/README.md</code>.</div>
   </div>
   <div class="aiw-body" id="aiw-body"></div>
   <div class="aiw-foot">
@@ -104,22 +88,16 @@
 (function(){
   "use strict";
   /* === Адрес воркера. Впишите сюда URL после деплоя (agent/README.md). === */
-  var AGENT_ENDPOINT = "https://api-portal-agent.noname15092025.workers.dev/"; // URL воркера
+  var AGENT_ENDPOINT = "https://api-portal-agent.noname15092025.workers.dev/"; // URL воркера (agent/README.md)
 
-  var LS_EP = "portal-agent-endpoint";
-  function endpoint(){ try{ return (localStorage.getItem(LS_EP)||"").trim() || AGENT_ENDPOINT; }catch(e){ return AGENT_ENDPOINT; } }
+  function endpoint(){ return AGENT_ENDPOINT; }
 
   var launch=document.getElementById("aiw-launch"),
       panel=document.getElementById("aiw-panel"),
       body=document.getElementById("aiw-body"),
       input=document.getElementById("aiw-in"),
       sendBtn=document.getElementById("aiw-send"),
-      closeBtn=document.getElementById("aiw-close"),
-      cfgBtn=document.getElementById("aiw-cfg-btn"),
-      cfg=document.getElementById("aiw-cfg"),
-      cfgUrl=document.getElementById("aiw-cfg-url"),
-      cfgSave=document.getElementById("aiw-cfg-save"),
-      cfgCancel=document.getElementById("aiw-cfg-cancel");
+      closeBtn=document.getElementById("aiw-close");
 
   var history=[], busy=false, KB=null, greeted=false;
 
@@ -251,8 +229,7 @@
     if(!endpoint()) notConfigured();
   }
   function notConfigured(){
-    addSys('⚙ Агент ещё не подключён. Нужен бесплатный воркер (Cloudflare + Gemini) — инструкция в <code>agent/README.md</code>.<br>Уже есть адрес воркера? <a id="aiw-open-cfg">Вставьте URL</a>.');
-    var a=document.getElementById("aiw-open-cfg"); if(a) a.onclick=openCfg;
+    addSys('⚠️ Агент временно недоступен. Попробуйте чуть позже.');
   }
 
   /* ---------- отправка ---------- */
@@ -272,13 +249,6 @@
       })
       .catch(function(e){ typing(false); busy=false; addSys("⚠️ Сеть недоступна или воркер не отвечает: "+esc(e.message)); });
   }
-
-  /* ---------- настройки ---------- */
-  function openCfg(){ cfg.hidden=false; try{ cfgUrl.value=(localStorage.getItem(LS_EP)||""); }catch(e){} cfgUrl.focus(); }
-  function closeCfg(){ cfg.hidden=true; }
-  cfgBtn.onclick=function(){ cfg.hidden?openCfg():closeCfg(); };
-  cfgCancel.onclick=closeCfg;
-  cfgSave.onclick=function(){ var v=cfgUrl.value.trim(); try{ if(v) localStorage.setItem(LS_EP,v); else localStorage.removeItem(LS_EP); }catch(e){} closeCfg(); addSys(v?"✅ URL сохранён. Можно задавать вопросы.":"URL очищен."); };
 
   /* ---------- открытие/закрытие, ввод ---------- */
   function autosize(){ input.style.height="auto"; input.style.height=Math.min(input.scrollHeight,120)+"px"; }
