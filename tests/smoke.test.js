@@ -849,11 +849,18 @@ async function searchTitles(page, q) {
       if (!t) return null;
       const head = [...t.querySelectorAll("th")].map((x) => x.textContent.trim());
       const rows = [...t.querySelectorAll("tbody tr")].map((tr) => [...tr.children].map((td) => td.textContent.trim()));
-      return { head, n: rows.length, masked: rows.filter((c) => /не публикуется/.test(c.join(" "))).length, trex: rows.find((c) => /trexbet\.com/.test(c[0])) };
+      const logins = rows.map((c) => c[1]).filter(Boolean);
+      const dup = logins.filter((l, i) => logins.indexOf(l) !== i);
+      const all = rows.map((c) => c.join(" ")).join("\n");
+      return { head, n: rows.length, masked: rows.filter((c) => /не публикуется/.test(c.join(" "))).length,
+        trex: rows.find((c) => /trexbet\.com/.test(c[0])), dup: [...new Set(dup)],
+        newSites: ["sapphirebet", "betmaan", "afropari", "fantzo", "grandpari"].filter((s) => all.indexOf(s) >= 0) };
     });
     assert.ok(r, "таблица Креды не открылась");
-    assert.ok(r.head.some((x) => /Password/.test(x)) && r.n >= 60 && r.masked === 0, "таблица неполная: " + JSON.stringify({ n: r.n, masked: r.masked }));
+    assert.ok(r.head.some((x) => /Password/.test(x)) && r.n >= 70 && r.masked === 0, "таблица неполная: " + JSON.stringify({ n: r.n, masked: r.masked }));
     assert.ok(r.trex && r.trex[1] && r.trex[2] && !/не публикуется/.test(r.trex[1]), "нет кредов trexbet");
+    assert.strictEqual(r.dup.length, 0, "в таблице повторяются логины: " + r.dup.join(", "));
+    assert.strictEqual(r.newSites.length, 5, "не все новые сайты добавлены: " + r.newSites.join(", "));
   });
 
   await check("экран входа: при открытии без пароля сайт закрыт, неверный пароль не пускает, правильный пускает и переживает перезагрузку, «Выйти» снова закрывает", async () => {
