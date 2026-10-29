@@ -29,7 +29,7 @@
    - (необязательно) **Variable** `ALLOW_ORIGIN` =
      `https://noname15092025-ctrl.github.io` — чтобы воркером пользовался
      только наш сайт;
-   - (необязательно) **Variable** `MODEL` = `gemini-2.0-flash`
+   - (необязательно) **Variable** `MODEL` = `gemini-3.8-flash`
      (можно `gemini-2.5-flash` и т. п.).
 5. Скопируй адрес воркера — он вида
    `https://api-portal-agent.<твой-поддомен>.workers.dev`.
