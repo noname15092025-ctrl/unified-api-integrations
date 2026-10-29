@@ -2621,7 +2621,7 @@ If new parameters or features appear in the API, we will let you know.`},
 (function(){
   "use strict";
   /* === Адрес воркера. Впишите сюда URL после деплоя (agent/README.md). === */
-  var AGENT_ENDPOINT = ""; // <-- вставь сюда URL воркера
+  var AGENT_ENDPOINT = "https://api-portal-agent.noname15092025.workers.dev/"; // URL воркера (agent/README.md)
 
   var LS_EP = "portal-agent-endpoint";
   function endpoint(){ try{ return (localStorage.getItem(LS_EP)||"").trim() || AGENT_ENDPOINT; }catch(e){ return AGENT_ENDPOINT; } }
