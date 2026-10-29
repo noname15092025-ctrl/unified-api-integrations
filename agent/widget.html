@@ -1,0 +1,292 @@
+<!-- ============================================================
+     ИИ-ассистент портала (чат справа внизу)
+     Бэкенд: Cloudflare Worker -> Gemini (см. agent/README.md)
+     ============================================================ -->
+<style>
+.aiw-launch{position:fixed;right:20px;bottom:20px;z-index:9000;display:none;align-items:center;gap:8px;
+  padding:11px 16px 11px 13px;border:none;border-radius:999px;cursor:pointer;
+  background:var(--accent);color:#fff;font:600 14px/1 inherit;
+  box-shadow:0 6px 20px rgba(16,24,40,.22),0 2px 6px rgba(16,24,40,.14);transition:transform .12s ease,box-shadow .12s ease}
+.aiw-launch:hover{transform:translateY(-1px);box-shadow:0 10px 26px rgba(16,24,40,.28)}
+.aiw-launch.aiw-ready{display:inline-flex}
+.aiw-launch svg{width:19px;height:19px}
+.aiw-panel{position:fixed;right:20px;bottom:20px;z-index:9001;width:min(400px,calc(100vw - 32px));
+  height:min(620px,calc(100vh - 40px));display:none;flex-direction:column;overflow:hidden;
+  background:var(--panel);border:1px solid var(--line);border-radius:16px;
+  box-shadow:0 18px 50px rgba(16,24,40,.28),0 6px 16px rgba(16,24,40,.14)}
+.aiw-panel.aiw-open{display:flex}
+.aiw-head{display:flex;align-items:center;gap:9px;padding:12px 12px 12px 15px;border-bottom:1px solid var(--line);background:var(--panel-2)}
+.aiw-head .aiw-dot{width:9px;height:9px;border-radius:50%;background:var(--ok);flex:0 0 auto;box-shadow:0 0 0 3px rgba(26,127,75,.14)}
+.aiw-title{font-weight:700;font-size:14px;color:var(--ink);flex:1 1 auto;line-height:1.2}
+.aiw-title span{display:block;font-weight:500;font-size:11.5px;color:var(--muted)}
+.aiw-ico{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border:none;border-radius:8px;
+  background:transparent;color:var(--muted);cursor:pointer;font-size:16px}
+.aiw-ico:hover{background:var(--line-2);color:var(--ink)}
+.aiw-note{display:flex;gap:7px;align-items:flex-start;padding:9px 14px;font-size:12px;line-height:1.45;
+  color:var(--warn);background:rgba(180,83,9,.08);border-bottom:1px solid var(--line)}
+.aiw-note b{font-weight:700}
+.aiw-body{flex:1 1 auto;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px;background:var(--bg)}
+.aiw-msg{max-width:88%;padding:9px 12px;border-radius:13px;font-size:13.5px;line-height:1.5;white-space:normal;word-wrap:break-word}
+.aiw-msg.u{align-self:flex-end;background:var(--accent);color:#fff;border-bottom-right-radius:4px}
+.aiw-msg.a{align-self:flex-start;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-bottom-left-radius:4px}
+.aiw-msg.a .aiw-md>*:first-child{margin-top:0}
+.aiw-msg.a .aiw-md>*:last-child{margin-bottom:0}
+.aiw-md p{margin:0 0 8px}.aiw-md ul,.aiw-md ol{margin:0 0 8px;padding-left:20px}.aiw-md li{margin:2px 0}
+.aiw-md h3,.aiw-md h4{margin:10px 0 6px;font-size:13.5px;font-weight:700}
+.aiw-md code{font-family:var(--mono);font-size:12px;background:var(--code-bg);padding:1px 5px;border-radius:5px}
+.aiw-md pre{margin:0 0 8px;padding:9px 11px;background:var(--code-bg);border:1px solid var(--line);border-radius:8px;overflow-x:auto}
+.aiw-md pre code{background:none;padding:0;font-size:12px;line-height:1.45;white-space:pre}
+.aiw-md a{color:var(--accent)}
+.aiw-dis{margin-top:7px;padding-top:6px;border-top:1px dashed var(--line);font-size:11px;color:var(--muted);line-height:1.4}
+.aiw-sys{align-self:center;max-width:94%;text-align:center;font-size:12px;color:var(--muted);line-height:1.5}
+.aiw-sys a{color:var(--accent);cursor:pointer}
+.aiw-typing{align-self:flex-start;display:flex;gap:4px;padding:11px 13px;background:var(--panel);border:1px solid var(--line);border-radius:13px;border-bottom-left-radius:4px}
+.aiw-typing i{width:6px;height:6px;border-radius:50%;background:var(--muted);opacity:.5;animation:aiwb 1s infinite}
+.aiw-typing i:nth-child(2){animation-delay:.15s}.aiw-typing i:nth-child(3){animation-delay:.3s}
+@keyframes aiwb{0%,60%,100%{opacity:.3;transform:translateY(0)}30%{opacity:.9;transform:translateY(-3px)}}
+.aiw-foot{border-top:1px solid var(--line);padding:10px;background:var(--panel)}
+.aiw-inrow{display:flex;gap:8px;align-items:flex-end}
+.aiw-in{flex:1 1 auto;resize:none;max-height:120px;min-height:40px;padding:9px 11px;border:1px solid var(--line);border-radius:10px;
+  font:inherit;font-size:13.5px;line-height:1.4;color:var(--ink);background:var(--panel-2);outline:none}
+.aiw-in:focus{border-color:var(--accent);background:var(--panel)}
+.aiw-send{flex:0 0 auto;width:40px;height:40px;border:none;border-radius:10px;background:var(--accent);color:#fff;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+.aiw-send:disabled{opacity:.45;cursor:default}
+.aiw-send svg{width:18px;height:18px}
+.aiw-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.aiw-chip{border:1px solid var(--line);background:var(--panel-2);color:var(--ink-2);border-radius:999px;padding:5px 10px;font-size:12px;cursor:pointer;line-height:1.2}
+.aiw-chip:hover{border-color:var(--accent);color:var(--accent)}
+.aiw-cfg{padding:12px 14px;border-bottom:1px solid var(--line);background:var(--panel-2);font-size:12.5px;color:var(--ink-2);line-height:1.5}
+.aiw-cfg label{display:block;font-weight:700;margin-bottom:5px;color:var(--ink)}
+.aiw-cfg input{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:12.5px;margin-bottom:8px;background:var(--panel)}
+.aiw-cfg .aiw-cfg-row{display:flex;gap:8px}
+.aiw-cfg button{border:none;border-radius:8px;padding:7px 12px;font:600 12.5px inherit;cursor:pointer}
+.aiw-cfg .ok{background:var(--accent);color:#fff}.aiw-cfg .no{background:var(--line-2);color:var(--ink-2)}
+@media (max-width:480px){.aiw-panel{right:0;bottom:0;width:100vw;height:100vh;border-radius:0}.aiw-launch{right:14px;bottom:14px}}
+</style>
+
+<button id="aiw-launch" class="aiw-launch" type="button" aria-label="Спросить ИИ-ассистента">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7A8.38 8.38 0 0 1 4 11.5 8.5 8.5 0 0 1 12.5 3 8.38 8.38 0 0 1 21 11.5z"/></svg>
+  Спросить ИИ
+</button>
+
+<section id="aiw-panel" class="aiw-panel" aria-label="ИИ-ассистент портала">
+  <div class="aiw-head">
+    <span class="aiw-dot"></span>
+    <div class="aiw-title">ИИ-ассистент портала<span>анализирует документацию API</span></div>
+    <button class="aiw-ico" id="aiw-cfg-btn" type="button" title="Настроить подключение">⚙</button>
+    <button class="aiw-ico" id="aiw-close" type="button" title="Свернуть">✕</button>
+  </div>
+  <div class="aiw-note">
+    <span>⚠️</span>
+    <div><b>Ответы генерирует ИИ</b> по материалам портала. Всегда думайте своей головой и проверяйте по документации и у коллег.</div>
+  </div>
+  <div class="aiw-cfg" id="aiw-cfg" hidden>
+    <label for="aiw-cfg-url">URL воркера (Cloudflare)</label>
+    <input id="aiw-cfg-url" type="url" placeholder="https://api-portal-agent.xxx.workers.dev" autocomplete="off">
+    <div class="aiw-cfg-row">
+      <button class="ok" id="aiw-cfg-save" type="button">Сохранить</button>
+      <button class="no" id="aiw-cfg-cancel" type="button">Отмена</button>
+    </div>
+    <div style="margin-top:8px;color:var(--muted)">Сохранится только в этом браузере. Чтобы агент работал у всех — впишите URL в <code>AGENT_ENDPOINT</code> в index.html. Инструкция: <code>agent/README.md</code>.</div>
+  </div>
+  <div class="aiw-body" id="aiw-body"></div>
+  <div class="aiw-foot">
+    <div class="aiw-inrow">
+      <textarea class="aiw-in" id="aiw-in" rows="1" placeholder="Спросите про API, эндпоинты, ошибки…"></textarea>
+      <button class="aiw-send" id="aiw-send" type="button" title="Отправить" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/></svg>
+      </button>
+    </div>
+  </div>
+</section>
+
+<script>
+(function(){
+  "use strict";
+  /* === Адрес воркера. Впишите сюда URL после деплоя (agent/README.md). === */
+  var AGENT_ENDPOINT = ""; // <-- вставь сюда URL воркера
+
+  var LS_EP = "portal-agent-endpoint";
+  function endpoint(){ try{ return (localStorage.getItem(LS_EP)||"").trim() || AGENT_ENDPOINT; }catch(e){ return AGENT_ENDPOINT; } }
+
+  var launch=document.getElementById("aiw-launch"),
+      panel=document.getElementById("aiw-panel"),
+      body=document.getElementById("aiw-body"),
+      input=document.getElementById("aiw-in"),
+      sendBtn=document.getElementById("aiw-send"),
+      closeBtn=document.getElementById("aiw-close"),
+      cfgBtn=document.getElementById("aiw-cfg-btn"),
+      cfg=document.getElementById("aiw-cfg"),
+      cfgUrl=document.getElementById("aiw-cfg-url"),
+      cfgSave=document.getElementById("aiw-cfg-save"),
+      cfgCancel=document.getElementById("aiw-cfg-cancel");
+
+  var history=[], busy=false, KB=null, greeted=false;
+
+  /* ---------- показывать запуск только после входа (гейт) ---------- */
+  function gateOpen(){ var g=document.getElementById("gate"); return !g || g.classList.contains("gate-off"); }
+  function syncReady(){ launch.classList.toggle("aiw-ready", gateOpen()); if(!gateOpen()){ panel.classList.remove("aiw-open"); } }
+  var gateEl=document.getElementById("gate");
+  if(gateEl && window.MutationObserver){ new MutationObserver(syncReady).observe(gateEl,{attributes:true,attributeFilter:["class"]}); }
+  syncReady();
+
+  /* ---------- утилиты ---------- */
+  function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
+
+  /* мини-markdown для ответов */
+  function mdRender(src){
+    src=String(src||"");
+    var out=[], lines=src.split(/\r?\n/), i=0;
+    function inline(t){
+      t=esc(t);
+      t=t.replace(/`([^`]+)`/g,function(_,c){return "<code>"+c+"</code>";});
+      t=t.replace(/\*\*([^*]+)\*\*/g,"<strong>$1</strong>");
+      t=t.replace(/(^|[^*])\*([^*\n]+)\*/g,"$1<em>$2</em>");
+      t=t.replace(/\[([^\]]+)\]\((https?:[^)\s]+|#\/[^)\s]*)\)/g,function(_,tx,u){return '<a href="'+u+'" target="_blank" rel="noopener">'+tx+"</a>";});
+      return t;
+    }
+    while(i<lines.length){
+      var ln=lines[i];
+      if(/^```/.test(ln)){ var buf=[]; i++; while(i<lines.length && !/^```/.test(lines[i])){ buf.push(lines[i]); i++; } i++; out.push("<pre><code>"+esc(buf.join("\n"))+"</code></pre>"); continue; }
+      if(/^#{2,4}\s+/.test(ln)){ out.push("<h4>"+inline(ln.replace(/^#{2,4}\s+/,""))+"</h4>"); i++; continue; }
+      if(/^\s*[-*]\s+/.test(ln)){ var li=[]; while(i<lines.length && /^\s*[-*]\s+/.test(lines[i])){ li.push("<li>"+inline(lines[i].replace(/^\s*[-*]\s+/,""))+"</li>"); i++; } out.push("<ul>"+li.join("")+"</ul>"); continue; }
+      if(/^\s*\d+[.)]\s+/.test(ln)){ var ol=[]; while(i<lines.length && /^\s*\d+[.)]\s+/.test(lines[i])){ ol.push("<li>"+inline(lines[i].replace(/^\s*\d+[.)]\s+/,""))+"</li>"); i++; } out.push("<ol>"+ol.join("")+"</ol>"); continue; }
+      if(/^\s*$/.test(ln)){ i++; continue; }
+      var p=[ln]; i++; while(i<lines.length && !/^\s*$/.test(lines[i]) && !/^```/.test(lines[i]) && !/^#{2,4}\s/.test(lines[i]) && !/^\s*([-*]|\d+[.)])\s/.test(lines[i])){ p.push(lines[i]); i++; }
+      out.push("<p>"+inline(p.join(" "))+"</p>");
+    }
+    return out.join("");
+  }
+
+  /* ---------- база знаний из данных портала ---------- */
+  function buildKB(){
+    var DATA; try{ DATA=JSON.parse(document.getElementById("portal-data").textContent); }catch(e){ return {outline:"",chunks:[]}; }
+    var chunks=[], outline=[];
+    (DATA.apis||[]).forEach(function(api){
+      outline.push("## "+api.title+(api.baseUrl?" — "+api.baseUrl:""));
+      var ops=api.operations||{};
+      Object.keys(ops).forEach(function(k){
+        var o=ops[k]; if(!o) return;
+        var head=o.method+" "+o.path+(o.summary?" — "+o.summary:"");
+        outline.push("- "+head+(o.deprecated?" (deprecated)":""));
+        var t=[api.title+" ("+(api.baseUrl||"")+")", head];
+        if(o.description) t.push(o.description);
+        if(o.params&&o.params.length) t.push("Параметры: "+o.params.map(function(p){return p.name+(p.in?" ("+p.in+")":"")+(p.required?"*":"");}).join(", "));
+        if(o.body){ var bf=o.body.fields||o.body.properties; if(bf){ try{ t.push("Тело запроса: "+(Array.isArray(bf)?bf.map(function(f){return f.name;}).join(", "):Object.keys(bf).join(", "))); }catch(e){} } }
+        if(o.responses){ try{ var rk=Array.isArray(o.responses)?o.responses.map(function(r){return (r.code||r.status)+" "+(r.description||"");}):Object.keys(o.responses).map(function(c){var r=o.responses[c];return c+" "+((r&&(r.description||r.summary))||"");}); t.push("Ответы: "+rk.join("; ")); }catch(e){} }
+        chunks.push({title:"["+api.title+"] "+head, text:t.join("\n")});
+      });
+    });
+    (DATA.faq&&DATA.faq.categories||[]).forEach(function(c){
+      (c.blocks||[]).forEach(function(b){
+        (b.pairs||[]).forEach(function(p){
+          if(!p.q) return;
+          chunks.push({title:"FAQ: "+p.q, text:"Вопрос: "+p.q+"\nОтвет: "+(p.a||"")});
+        });
+      });
+    });
+    ((DATA.faq&&DATA.faq.reference)||[]).forEach(function(r){
+      if(r.md) chunks.push({title:"Справочник: "+r.title, text:(r.title||"")+"\n"+r.md});
+    });
+    (DATA.docs||[]).forEach(function(d){
+      var txt=d.content||d.md||""; if(!txt) return;
+      var parts=txt.split(/\n(?=#{2,3}\s)/);
+      parts.forEach(function(seg){
+        seg=seg.trim(); if(seg.length<30) return;
+        var h=(seg.match(/^#{2,3}\s+(.+)/)||[,d.title])[1];
+        chunks.push({title:"["+d.title+"] "+h, text:seg});
+      });
+    });
+    chunks.forEach(function(ch){ ch.terms=(ch.title+" "+ch.text).toLowerCase().replace(/[^a-zа-я0-9_/]+/gi," ").split(/\s+/).filter(function(w){return w.length>=3;}); });
+    return {outline:outline.join("\n"), chunks:chunks};
+  }
+
+  function expand(tokens){
+    var dict=window.SEARCH_DICT||{}, extra=[];
+    tokens.forEach(function(tk){ Object.keys(dict).forEach(function(stem){ if(tk.indexOf(stem)===0||stem.indexOf(tk)===0){ (dict[stem]||[]).forEach(function(e){ String(e).toLowerCase().split(/\s+/).forEach(function(w){ if(w.length>=2) extra.push(w); }); }); } }); });
+    return tokens.concat(extra);
+  }
+
+  function pickContext(query){
+    if(!KB) KB=buildKB();
+    var toks=query.toLowerCase().replace(/[^a-zа-я0-9_/]+/gi," ").split(/\s+/).filter(function(w){return w.length>=3;});
+    toks=expand(toks);
+    var uniq={}; toks.forEach(function(t){uniq[t]=1;}); toks=Object.keys(uniq);
+    var scored=KB.chunks.map(function(ch){
+      var sc=0, title=ch.title.toLowerCase();
+      toks.forEach(function(t){
+        if(title.indexOf(t)>=0) sc+=4;
+        for(var j=0;j<ch.terms.length;j++){ if(ch.terms[j].indexOf(t)===0){ sc+=1; if(sc>40) break; } }
+      });
+      return {ch:ch, sc:sc};
+    }).filter(function(x){return x.sc>0;}).sort(function(a,b){return b.sc-a.sc;});
+    var picked=[], budget=46000;
+    for(var i=0;i<scored.length;i++){ var tx=scored[i].ch.title+"\n"+scored[i].ch.text; if(budget-tx.length<0 && picked.length>=3) break; picked.push("### "+scored[i].ch.title+"\n"+scored[i].ch.text); budget-=tx.length; if(picked.length>=28) break; }
+    if(!picked.length) picked.push("(точных совпадений не найдено — опирайся на оглавление ниже)");
+    return "ОГЛАВЛЕНИЕ ВСЕХ API (эндпоинты портала):\n"+KB.outline+"\n\n===== РЕЛЕВАНТНЫЕ ВЫДЕРЖКИ =====\n"+picked.join("\n\n");
+  }
+
+  /* ---------- UI сообщений ---------- */
+  function scrollDown(){ body.scrollTop=body.scrollHeight; }
+  function addUser(t){ var d=document.createElement("div"); d.className="aiw-msg u"; d.textContent=t; body.appendChild(d); scrollDown(); }
+  function addAI(t){
+    var d=document.createElement("div"); d.className="aiw-msg a";
+    d.innerHTML='<div class="aiw-md">'+mdRender(t)+'</div><div class="aiw-dis">⚠️ Это ответ ИИ по документации портала — не истина в последней инстанции. Думайте своей головой и проверяйте.</div>';
+    body.appendChild(d); scrollDown();
+  }
+  function addSys(html){ var d=document.createElement("div"); d.className="aiw-sys"; d.innerHTML=html; body.appendChild(d); scrollDown(); return d; }
+  function typing(on){
+    var ex=document.getElementById("aiw-tp");
+    if(on){ if(ex) return; var d=document.createElement("div"); d.className="aiw-typing"; d.id="aiw-tp"; d.innerHTML="<i></i><i></i><i></i>"; body.appendChild(d); scrollDown(); }
+    else if(ex){ ex.remove(); }
+  }
+
+  function greet(){
+    if(greeted) return; greeted=true;
+    addSys("Привет! Я анализирую документацию этого портала (API, FAQ, Back Office и т. д.) и помогу разобраться.<br>Примеры вопросов:");
+    var chips=["Как сгенерировать JWT-токен для B2B?","Что значит ошибка failed to get available bets?","Какие эндпоинты есть у Provider API?","Как вручную изменить статус транзакции?"];
+    var wrap=document.createElement("div"); wrap.className="aiw-chips";
+    chips.forEach(function(c){ var b=document.createElement("button"); b.className="aiw-chip"; b.type="button"; b.textContent=c; b.onclick=function(){ input.value=c; autosize(); input.focus(); sendBtn.disabled=false; }; wrap.appendChild(b); });
+    body.appendChild(wrap); scrollDown();
+    if(!endpoint()) notConfigured();
+  }
+  function notConfigured(){
+    addSys('⚙ Агент ещё не подключён. Нужен бесплатный воркер (Cloudflare + Gemini) — инструкция в <code>agent/README.md</code>.<br>Уже есть адрес воркера? <a id="aiw-open-cfg">Вставьте URL</a>.');
+    var a=document.getElementById("aiw-open-cfg"); if(a) a.onclick=openCfg;
+  }
+
+  /* ---------- отправка ---------- */
+  function send(){
+    var q=input.value.trim(); if(!q||busy) return;
+    var ep=endpoint();
+    if(!ep){ addUser(q); input.value=""; autosize(); notConfigured(); return; }
+    addUser(q); history.push({role:"user",text:q}); input.value=""; autosize(); sendBtn.disabled=true;
+    busy=true; typing(true);
+    var ctx=pickContext(q);
+    fetch(ep,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:history,context:ctx})})
+      .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,j:j}; }); })
+      .then(function(res){
+        typing(false); busy=false;
+        if(res.j && res.j.text){ addAI(res.j.text); history.push({role:"model",text:res.j.text}); }
+        else{ addSys("⚠️ "+esc((res.j&&res.j.error)||"Не удалось получить ответ. Попробуйте ещё раз.")); }
+      })
+      .catch(function(e){ typing(false); busy=false; addSys("⚠️ Сеть недоступна или воркер не отвечает: "+esc(e.message)); });
+  }
+
+  /* ---------- настройки ---------- */
+  function openCfg(){ cfg.hidden=false; try{ cfgUrl.value=(localStorage.getItem(LS_EP)||""); }catch(e){} cfgUrl.focus(); }
+  function closeCfg(){ cfg.hidden=true; }
+  cfgBtn.onclick=function(){ cfg.hidden?openCfg():closeCfg(); };
+  cfgCancel.onclick=closeCfg;
+  cfgSave.onclick=function(){ var v=cfgUrl.value.trim(); try{ if(v) localStorage.setItem(LS_EP,v); else localStorage.removeItem(LS_EP); }catch(e){} closeCfg(); addSys(v?"✅ URL сохранён. Можно задавать вопросы.":"URL очищен."); };
+
+  /* ---------- открытие/закрытие, ввод ---------- */
+  function autosize(){ input.style.height="auto"; input.style.height=Math.min(input.scrollHeight,120)+"px"; }
+  function openPanel(){ panel.classList.add("aiw-open"); greet(); setTimeout(function(){input.focus();},60); }
+  launch.onclick=openPanel;
+  closeBtn.onclick=function(){ panel.classList.remove("aiw-open"); };
+  input.addEventListener("input",function(){ autosize(); sendBtn.disabled=!input.value.trim(); });
+  input.addEventListener("keydown",function(e){ if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); send(); } });
+  sendBtn.onclick=send;
+})();
+</script>
