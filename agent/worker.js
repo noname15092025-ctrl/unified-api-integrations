@@ -8,7 +8,7 @@
  *
  * Переменные окружения воркера:
  *   GEMINI_API_KEY  (secret, обязателен)  — ключ из Google AI Studio
- *   MODEL           (var, необязателен)   — по умолчанию "gemini-3.8-flash"
+ *   MODEL           (var, необязателен)   — по умолчанию "gemini-2.5-flash"
  *   ALLOW_ORIGIN    (var, необязателен)   — домен сайта, напр.
  *                                           "https://noname15092025-ctrl.github.io"
  *                                           по умолчанию "*"
@@ -70,7 +70,7 @@ export default {
     const context = typeof body.context === "string" ? body.context.slice(0, 900000) : "";
     if (!messages.length) return json({ error: "Пустой запрос" }, 400, headers);
 
-    const model = (env.MODEL || "gemini-3.8-flash").trim();
+    const model = (env.MODEL || "gemini-2.5-flash").trim();
 
     // История диалога -> формат Gemini
     const contents = messages.slice(-12).map(m => ({
