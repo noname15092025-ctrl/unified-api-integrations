@@ -2611,6 +2611,12 @@ If new parameters or features appear in the API, we will let you know.`},
 .aiw-md pre code{background:none;padding:0;font-size:12px;line-height:1.45;white-space:pre}
 .aiw-md a{color:var(--accent)}
 .aiw-dis{margin-top:7px;padding-top:6px;border-top:1px dashed var(--line);font-size:11px;color:var(--muted);line-height:1.4}
+.aiw-dis.web{color:var(--warn)}
+.aiw-mode{display:flex;gap:6px;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--panel-2)}
+.aiw-mode-btn{flex:1;border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:8px;padding:6px 8px;font:600 12px inherit;cursor:pointer}
+.aiw-mode-btn.is-on{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.aiw-webbtn{margin-top:8px;border:1px dashed var(--line);background:transparent;color:var(--accent);border-radius:8px;padding:6px 10px;font:600 12px inherit;cursor:pointer;width:100%;text-align:left}
+.aiw-webbtn:hover{border-color:var(--accent);background:var(--accent-soft)}
 .aiw-sys{align-self:center;max-width:94%;text-align:center;font-size:12px;color:var(--muted);line-height:1.5}
 .aiw-sys a{color:var(--accent);cursor:pointer}
 .aiw-typing{align-self:flex-start;display:flex;gap:4px;padding:11px 13px;background:var(--panel);border:1px solid var(--line);border-radius:13px;border-bottom-left-radius:4px}
@@ -2646,6 +2652,10 @@ If new parameters or features appear in the API, we will let you know.`},
     <span>⚠️</span>
     <div><b>Ответы генерирует ИИ</b> по материалам портала. Всегда думайте своей головой и проверяйте по документации и у коллег.</div>
   </div>
+  <div class="aiw-mode" id="aiw-mode">
+    <button class="aiw-mode-btn is-on" id="aiw-mode-doc" type="button" title="Ответ по документации портала">📄 По документации</button>
+    <button class="aiw-mode-btn" id="aiw-mode-web" type="button" title="Общий ответ из интернета (веб-поиск)">🌐 Интернет</button>
+  </div>
   <div class="aiw-body" id="aiw-body"></div>
   <div class="aiw-foot">
     <div class="aiw-inrow">
@@ -2672,7 +2682,7 @@ If new parameters or features appear in the API, we will let you know.`},
       sendBtn=document.getElementById("aiw-send"),
       closeBtn=document.getElementById("aiw-close");
 
-  var history=[], busy=false, KB=null, greeted=false;
+  var history=[], busy=false, KB=null, greeted=false, webMode=false, lastUserText="";
 
   /* ---------- показывать запуск только после входа (гейт) ---------- */
   function gateOpen(){ var g=document.getElementById("gate"); return !g || g.classList.contains("gate-off"); }
@@ -2780,10 +2790,19 @@ If new parameters or features appear in the API, we will let you know.`},
   /* ---------- UI сообщений ---------- */
   function scrollDown(){ body.scrollTop=body.scrollHeight; }
   function addUser(t){ var d=document.createElement("div"); d.className="aiw-msg u"; d.textContent=t; body.appendChild(d); scrollDown(); }
-  function addAI(t){
+  function modeDisclaimer(mode){
+    return mode==="web"
+      ? '🌐 <b>Это общий ответ из интернета — ему верить нельзя.</b> Это не документация портала, обязательно перепроверяйте.'
+      : '⚠️ Это ответ ИИ по документации портала — не истина в последней инстанции. Думайте своей головой и проверяйте.';
+  }
+  function addAI(t, mode){
     var d=document.createElement("div"); d.className="aiw-msg a";
-    d.innerHTML='<div class="aiw-md">'+mdRender(t)+'</div><div class="aiw-dis">⚠️ Это ответ ИИ по документации портала — не истина в последней инстанции. Думайте своей головой и проверяйте.</div>';
-    body.appendChild(d); scrollDown();
+    var extra=(mode!=="web") ? '<button class="aiw-webbtn" type="button">🌐 Этого нет в документации? Поискать в интернете</button>' : '';
+    d.innerHTML='<div class="aiw-md">'+mdRender(t)+'</div><div class="aiw-dis'+(mode==="web"?" web":"")+'">'+modeDisclaimer(mode)+'</div>'+extra;
+    body.appendChild(d);
+    var wb=d.querySelector(".aiw-webbtn");
+    if(wb) wb.onclick=function(){ if(lastUserText) askWeb(lastUserText); };
+    scrollDown();
   }
   function addSys(html){ var d=document.createElement("div"); d.className="aiw-sys"; d.innerHTML=html; body.appendChild(d); scrollDown(); return d; }
   function typing(on){
@@ -2806,21 +2825,30 @@ If new parameters or features appear in the API, we will let you know.`},
   }
 
   /* ---------- отправка ---------- */
-  function send(){
-    var q=input.value.trim(); if(!q||busy) return;
-    var ep=endpoint();
-    if(!ep){ addUser(q); input.value=""; autosize(); notConfigured(); return; }
-    addUser(q); history.push({role:"user",text:q}); input.value=""; autosize(); sendBtn.disabled=true;
+  function deliver(q, mode){
+    lastUserText=q;
+    addUser(q); history.push({role:"user",text:q}); sendBtn.disabled=true;
     busy=true; typing(true);
-    var ctx=pickContext(q);
-    fetch(ep,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:history,context:ctx})})
+    if(mode==="web") addSys("🌐 Ищу общий ответ в интернете…");
+    var ctx = mode==="web" ? "" : pickContext(q);
+    fetch(endpoint(),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:history,context:ctx,mode:mode})})
       .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,j:j}; }); })
       .then(function(res){
         typing(false); busy=false;
-        if(res.j && res.j.text){ addAI(res.j.text); history.push({role:"model",text:res.j.text}); }
+        if(res.j && res.j.text){ addAI(res.j.text, (res.j.mode||mode)); history.push({role:"model",text:res.j.text}); }
         else{ addSys("⚠️ "+esc((res.j&&res.j.error)||"Не удалось получить ответ. Попробуйте ещё раз.")); }
       })
       .catch(function(e){ typing(false); busy=false; addSys("⚠️ Сеть недоступна или воркер не отвечает: "+esc(e.message)); });
+  }
+  function send(){
+    var q=input.value.trim(); if(!q||busy) return;
+    if(!endpoint()){ addUser(q); input.value=""; autosize(); notConfigured(); return; }
+    input.value=""; autosize();
+    deliver(q, webMode?"web":"portal");
+  }
+  function askWeb(q){
+    if(busy||!endpoint()) return;
+    deliver(q, "web");
   }
 
   /* ---------- открытие/закрытие, ввод ---------- */
@@ -2831,6 +2859,16 @@ If new parameters or features appear in the API, we will let you know.`},
   input.addEventListener("input",function(){ autosize(); sendBtn.disabled=!input.value.trim(); });
   input.addEventListener("keydown",function(e){ if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); send(); } });
   sendBtn.onclick=send;
+
+  /* ---------- переключатель режима ---------- */
+  function setMode(web){
+    webMode=!!web;
+    document.getElementById("aiw-mode-doc").classList.toggle("is-on",!webMode);
+    document.getElementById("aiw-mode-web").classList.toggle("is-on",webMode);
+    input.placeholder = webMode ? "Общий вопрос (ответ из интернета)…" : "Спросите про API, эндпоинты, ошибки…";
+  }
+  document.getElementById("aiw-mode-doc").onclick=function(){ setMode(false); };
+  document.getElementById("aiw-mode-web").onclick=function(){ setMode(true); };
 
   /* ---------- внешний хук: передать вопрос из поиска ---------- */
   window.PortalAgentReady=function(){ return !!endpoint() && gateOpen(); };
