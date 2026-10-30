@@ -503,6 +503,11 @@ details.sch > summary::-webkit-details-marker { display: none; }
 .qa.qa-target { box-shadow: 0 0 0 2px var(--accent); }
 .qa .qa-actions { display: flex; justify-content: flex-end; margin-top: 10px; }
 .qa .qa-copy { position: static; }
+.copy-link { position: static; white-space: nowrap; }
+.op-linkbtn { margin-left: auto; }
+.qa-actions { display: flex; gap: 8px; align-items: center; }
+.res-ai .tt { color: var(--accent); font-weight: 700; }
+.res-ai .tag { background: var(--accent-soft); color: var(--accent); }
 body.editing .qa-actions { display: none; }
 
 /* ---------------- hover translation ---------------- */
@@ -1451,6 +1456,7 @@ If new parameters or features appear in the API, we will let you know.`},
       '<span class="m ' + op.method.toLowerCase() + '">' + op.method + "</span>" +
       '<span class="op-path">' + esc(op.path) + "</span>" +
       (op.deprecated ? '<span class="badge">deprecated</span>' : "") +
+      '<button class="copy copy-link op-linkbtn" type="button" data-link="#/' + api.key + '/' + encodeURIComponent(op.uid) + '" title="Скопировать ссылку на этот эндпоинт">🔗 Ссылка</button>' +
       "</div>";
     if (op.summary) h += '<div class="op-sub">' + esc(op.summary) + "</div>";
     h += '<div class="op-sub op-id">operationId: ' + esc(op.opId) + "</div></div>";
@@ -1898,6 +1904,26 @@ If new parameters or features appear in the API, we will let you know.`},
     return any ? h : h + '<div class="empty">Ничего не найдено. Очистите фильтр или выберите другую тему.</div>';
   }
 
+  /* page (FAQ block) -> category id, for building shareable links to a question */
+  var QA_PAGE_CAT = null;
+  function qaPageCat(page) {
+    if (!QA_PAGE_CAT) {
+      QA_PAGE_CAT = {};
+      ((DATA.faq && DATA.faq.categories) || []).forEach(function (c) {
+        (c.blocks || []).forEach(function (b) { QA_PAGE_CAT[String(b.page)] = c.id; });
+      });
+    }
+    return QA_PAGE_CAT[page];
+  }
+  /* shareable deep-link for a Q&A card, derived from its <details> id */
+  function qaLinkFromId(id) {
+    var mq = String(id || "").match(/^qa-(.+)-(\d+)$/);
+    if (mq) { var cat = (S.tab === "faq" && S.cat) ? S.cat : qaPageCat(mq[1]); return cat ? "#/faq/" + cat + "/" + mq[1] + "/" + mq[2] : ""; }
+    var mt = String(id || "").match(/^(.+)-(\d+)$/);
+    if (mt) return "#/" + mt[1] + "/t/" + mt[2];
+    return "";
+  }
+
   /* every Q&A card (FAQ and FAQ TG) gets the same copy button under the answer */
   function decorateQa() {
     /* summary is a flex row: keep the whole question (text + inline code) in one wrapping item */
@@ -1910,7 +1936,9 @@ If new parameters or features appear in the API, we will let you know.`},
     });
     Array.prototype.forEach.call(mainEl.querySelectorAll("details.qa > .ans"), function (ans) {
       if (ans.querySelector(".qa-actions")) return;
-      ans.insertAdjacentHTML("beforeend", '<div class="qa-actions"><button class="copy qa-copy" type="button">Копировать</button></div>');
+      var link = qaLinkFromId((ans.parentElement || {}).id);
+      var linkBtn = link ? '<button class="copy copy-link" type="button" data-link="' + attr(link) + '" title="Скопировать ссылку на этот вопрос">🔗 Ссылка</button>' : "";
+      ans.insertAdjacentHTML("beforeend", '<div class="qa-actions">' + linkBtn + '<button class="copy qa-copy" type="button">Копировать</button></div>');
     });
   }
 
@@ -2199,6 +2227,12 @@ If new parameters or features appear in the API, we will let you know.`},
         copy(qaAnswerText(b.closest(".ans")), b);
       });
     });
+    mainEl.querySelectorAll(".copy-link").forEach(function (b) {
+      b.addEventListener("click", function (ev) {
+        ev.preventDefault(); ev.stopPropagation();
+        copy(location.origin + location.pathname + b.dataset.link, b);
+      });
+    });
     mainEl.querySelectorAll("[data-schema]").forEach(function (a) {
       a.addEventListener("click", function (ev) { ev.preventDefault(); showSchemaModal(a.dataset.schema); });
     });
@@ -2256,14 +2290,32 @@ If new parameters or features appear in the API, we will let you know.`},
   /* ---------------------------------------------------------- search UI */
   var searchInput, resultsEl;
 
+  /* a row that hands the current query to the AI assistant */
+  function aiSearchRow(q) {
+    if (!(window.PortalAgentReady && window.PortalAgentReady())) return "";
+    return '<button class="res res-ai" type="button">' +
+      '<span class="t"><span class="tt">🤖 Спросить ИИ: «' + esc(q) + '»</span><span class="tag">ИИ</span></span>' +
+      '<span class="s">Задать вопрос ассистенту по документации портала</span></button>';
+  }
+  function bindAiRow() {
+    var ab = resultsEl.querySelector(".res-ai");
+    if (!ab) return;
+    ab.addEventListener("click", function () {
+      var q2 = searchInput.value.trim();
+      resultsEl.classList.remove("on");
+      if (window.PortalAgentAsk) window.PortalAgentAsk(q2);
+    });
+  }
+
   function runSearch() {
     var q = searchInput.value.trim();
     document.getElementById("search-clear").style.display = q ? "block" : "none";
     if (q.length < 2) { resultsEl.classList.remove("on"); resultsEl.innerHTML = ""; return; }
     var res = search(q);
     if (!res.length) {
-      resultsEl.innerHTML = '<div class="res-head">Ничего не найдено</div>';
+      resultsEl.innerHTML = '<div class="res-head">Ничего не найдено</div>' + aiSearchRow(q);
       resultsEl.classList.add("on");
+      bindAiRow();
       return;
     }
     var html = '<div class="res-head">Найдено: ' + res.length + "</div>";
@@ -2273,9 +2325,10 @@ If new parameters or features appear in the API, we will let you know.`},
         '<span class="t"><span class="tt">' + highlight(it.title, q) + '</span><span class="tag">' + esc(it.tag) + "</span></span>" +
         '<span class="s">' + highlight(sub, q) + "</span></button>";
     });
+    html += aiSearchRow(q);
     resultsEl.innerHTML = html;
     resultsEl.classList.add("on");
-    resultsEl.querySelectorAll(".res").forEach(function (b) {
+    resultsEl.querySelectorAll(".res[data-i]").forEach(function (b) {
       b.addEventListener("click", function () {
         var it = res[+b.dataset.i];
         resultsEl.classList.remove("on");
@@ -2289,6 +2342,7 @@ If new parameters or features appear in the API, we will let you know.`},
         else nav("#/ref/" + it.page);
       });
     });
+    bindAiRow();
   }
 
   function revealOpen() {
@@ -2775,6 +2829,14 @@ If new parameters or features appear in the API, we will let you know.`},
   input.addEventListener("input",function(){ autosize(); sendBtn.disabled=!input.value.trim(); });
   input.addEventListener("keydown",function(e){ if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); send(); } });
   sendBtn.onclick=send;
+
+  /* ---------- внешний хук: передать вопрос из поиска ---------- */
+  window.PortalAgentReady=function(){ return !!endpoint() && gateOpen(); };
+  window.PortalAgentAsk=function(q){
+    if(!gateOpen()) return;
+    openPanel();
+    if(q){ input.value=q; autosize(); sendBtn.disabled=false; setTimeout(send,120); }
+  };
 })();
 </script>
 
