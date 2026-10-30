@@ -2612,6 +2612,8 @@ If new parameters or features appear in the API, we will let you know.`},
 .aiw-md a{color:var(--accent)}
 .aiw-dis{margin-top:7px;padding-top:6px;border-top:1px dashed var(--line);font-size:11px;color:var(--muted);line-height:1.4}
 .aiw-dis.web{color:var(--warn)}
+.aiw-utag{display:block;font-size:10px;font-weight:700;opacity:.85;margin-bottom:3px;letter-spacing:.02em}
+.aiw-utext{white-space:pre-wrap}
 .aiw-mode{display:flex;gap:6px;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--panel-2)}
 .aiw-mode-btn{flex:1;border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:8px;padding:6px 8px;font:600 12px inherit;cursor:pointer}
 .aiw-mode-btn.is-on{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
@@ -2789,7 +2791,13 @@ If new parameters or features appear in the API, we will let you know.`},
 
   /* ---------- UI сообщений ---------- */
   function scrollDown(){ body.scrollTop=body.scrollHeight; }
-  function addUser(t){ var d=document.createElement("div"); d.className="aiw-msg u"; d.textContent=t; body.appendChild(d); scrollDown(); }
+  function addUser(t, mode){
+    var d=document.createElement("div"); d.className="aiw-msg u";
+    var tag = mode ? ('<span class="aiw-utag">'+(mode==="web"?"🌐 интернет":"📄 документация")+'</span>') : '';
+    d.innerHTML = tag + '<span class="aiw-utext"></span>';
+    d.querySelector(".aiw-utext").textContent = t;
+    body.appendChild(d); scrollDown();
+  }
   function modeDisclaimer(mode){
     return mode==="web"
       ? '🌐 <b>Это общий ответ из интернета — ему верить нельзя.</b> Это не документация портала, обязательно перепроверяйте.'
@@ -2827,7 +2835,7 @@ If new parameters or features appear in the API, we will let you know.`},
   /* ---------- отправка ---------- */
   function deliver(q, mode){
     lastUserText=q;
-    addUser(q); history.push({role:"user",text:q}); sendBtn.disabled=true;
+    addUser(q, mode); history.push({role:"user",text:q}); sendBtn.disabled=true;
     busy=true; typing(true);
     if(mode==="web") addSys("🌐 Ищу общий ответ в интернете…");
     var ctx = mode==="web" ? "" : pickContext(q);
