@@ -35,14 +35,15 @@ const PORTAL_PROMPT = [
 ].join("\n");
 
 const WEB_PROMPT = [
-  "Ты — ассистент с доступом к веб-поиску. Это РЕЖИМ ОБЩЕГО ОТВЕТА: пользователь",
-  "не нашёл ответ во внутренней документации портала и просит общий ответ из интернета.",
+  "Это РЕЖИМ ОБЩЕГО ОТВЕТА: пользователь не нашёл ответ во внутренней документации",
+  "портала и просит общий ответ. Отвечай на основе своих общих знаний (модель",
+  "обучена на большом массиве данных из интернета).",
   "",
   "ПРАВИЛА:",
   "1. Отвечай на русском языке.",
-  "2. Отвечай по своим знаниям и результатам веб-поиска; это общая информация, а не",
-  "   документация их компании. Не выдавай общие сведения за внутренние регламенты портала.",
-  "3. Если уверенности нет — честно скажи об этом.",
+  "2. Это общая информация, а не документация их компании. Не выдавай общие сведения",
+  "   за внутренние регламенты портала.",
+  "3. Если не уверен или данные могли устареть — честно предупреди об этом.",
   "4. Форматируй ответ в Markdown.",
   "5. Никогда не раскрывай и не придумывай чужие логины, пароли, токены, ключи."
 ].join("\n");
@@ -100,22 +101,15 @@ export default {
         "HARM_CATEGORY_SEXUALLY_EXPLICIT", "HARM_CATEGORY_DANGEROUS_CONTENT"
       ].map(category => ({ category, threshold: "BLOCK_NONE" }))
     };
-    // В режиме web включаем веб-поиск Google (grounding)
-    if (mode === "web") payload.tools = [{ google_search: {} }];
+    // Примечание: живой веб-поиск Google (grounding) на бесплатном тарифе
+    // упирается в отдельную маленькую квоту и быстро выдаёт "quota exceeded".
+    // Поэтому web-режим отвечает на основе знаний модели, в рамках обычной
+    // бесплатной квоты. (Чтобы включить реальный поиск — см. ветку с tools.)
 
     const url = "https://generativelanguage.googleapis.com/v1beta/models/" +
       encodeURIComponent(model) + ":generateContent?key=" + encodeURIComponent(key);
 
-    let res = await callGemini(url, payload);
-
-    // В web-режиме веб-поиск (grounding) на free-тарифе часто недоступен или
-    // упирается в отдельную маленькую квоту. Если запрос с инструментом не
-    // прошёл — повторяем БЕЗ него: ответ придёт на основе знаний модели.
-    if (mode === "web" && !res.ok && payload.tools) {
-      delete payload.tools;
-      const retry = await callGemini(url, payload);
-      if (retry.ok || retry.text) { res = retry; res.degraded = true; }
-    }
+    const res = await callGemini(url, payload);
 
     if (res.netError) return json({ error: "Не удалось связаться с моделью: " + res.errMsg }, 502, headers);
     if (!res.ok) return json({ error: "Ошибка модели: " + res.errMsg }, res.status, headers);
