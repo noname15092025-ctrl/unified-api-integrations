@@ -108,11 +108,13 @@ export default {
 
     let res = await callGemini(url, payload);
 
-    // Если веб-поиск не поддержан на этом ключе/модели — повторяем без него
-    if (mode === "web" && !res.ok && /tool|google_search|search|function/i.test(res.errMsg || "")) {
+    // В web-режиме веб-поиск (grounding) на free-тарифе часто недоступен или
+    // упирается в отдельную маленькую квоту. Если запрос с инструментом не
+    // прошёл — повторяем БЕЗ него: ответ придёт на основе знаний модели.
+    if (mode === "web" && !res.ok && payload.tools) {
       delete payload.tools;
-      res = await callGemini(url, payload);
-      res.degraded = true;
+      const retry = await callGemini(url, payload);
+      if (retry.ok || retry.text) { res = retry; res.degraded = true; }
     }
 
     if (res.netError) return json({ error: "Не удалось связаться с моделью: " + res.errMsg }, 502, headers);
