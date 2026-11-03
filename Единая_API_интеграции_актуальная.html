@@ -1567,7 +1567,10 @@ If new parameters or features appear in the API, we will let you know.`},
     });
     /* same card grid as «Разделы портала» on HOME: the whole card is the link */
     h += '<h2 class="sec">Справочные материалы</h2><div class="home-sections">';
+    /* эти вынесены в левое меню — в карточках не дублируем */
+    var REF_IN_NAV = { "1158250641": 1, "1446707256": 1 };
     (FAQ.reference || []).forEach(function (r) {
+      if (REF_IN_NAV[String(r.page)]) return;
       h += '<a class="ref-card" href="#/ref/' + r.page + '"><b>' + esc(r.label) + "</b>" +
         "<span>" + esc(SP[r.space] || r.space) + " · " + esc(r.title) + "</span></a>";
     });
