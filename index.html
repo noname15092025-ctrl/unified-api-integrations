@@ -508,6 +508,21 @@ details.sch > summary::-webkit-details-marker { display: none; }
 .qa-actions { display: flex; gap: 8px; align-items: center; }
 .res-ai .tt { color: var(--accent); font-weight: 700; }
 .res-ai .tag { background: var(--accent-soft); color: var(--accent); }
+.gh-edit-btn { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 14px; padding: 8px 13px; border: 1px solid var(--accent); border-radius: 8px; background: var(--accent-soft); color: var(--accent); font: 600 13px inherit; cursor: pointer; }
+.gh-edit-btn:hover { background: var(--accent); color: #fff; }
+.gh-ov { position: fixed; inset: 0; z-index: 9500; background: rgba(12,16,22,.55); display: flex; align-items: center; justify-content: center; padding: 24px; }
+.gh-box { width: min(780px, 100%); max-height: 92vh; display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 18px 50px rgba(16,24,40,.3); overflow: hidden; }
+.gh-head { display: flex; align-items: center; justify-content: space-between; padding: 13px 16px; border-bottom: 1px solid var(--line); font-size: 15px; }
+.gh-x { border: none; background: transparent; color: var(--muted); font-size: 17px; cursor: pointer; }
+.gh-note { padding: 9px 16px; font-size: 12.5px; color: var(--warn); background: rgba(180,83,9,.08); border-bottom: 1px solid var(--line); }
+.gh-ta { flex: 1 1 auto; min-height: 320px; margin: 14px 16px 0; padding: 11px 13px; border: 1px solid var(--line); border-radius: 9px; background: var(--code-bg); color: var(--ink); font-family: var(--mono); font-size: 12.8px; line-height: 1.5; resize: vertical; }
+.gh-row { padding: 12px 16px 0; }
+.gh-pw { width: 260px; max-width: 100%; padding: 8px 11px; border: 1px solid var(--line); border-radius: 8px; font: inherit; font-size: 13px; background: var(--panel-2); color: var(--ink); }
+.gh-msg { padding: 8px 16px 0; font-size: 12.8px; color: var(--muted); min-height: 18px; line-height: 1.4; }
+.gh-actions { display: flex; gap: 10px; padding: 12px 16px 16px; }
+.gh-save { border: none; border-radius: 8px; padding: 9px 16px; background: var(--accent); color: #fff; font: 600 13.5px inherit; cursor: pointer; }
+.gh-save:disabled { opacity: .5; cursor: default; }
+.gh-cancel { border: 1px solid var(--line); border-radius: 8px; padding: 9px 16px; background: var(--panel-2); color: var(--ink-2); font: 600 13.5px inherit; cursor: pointer; }
 body.editing .qa-actions { display: none; }
 
 /* ---------------- hover translation ---------------- */
@@ -1705,10 +1720,94 @@ If new parameters or features appear in the API, we will let you know.`},
       showGate(); if (inp) inp.focus();
     }
   }
+  var GH_EDITABLE = {
+    "1158250641": { kind: "md", title: "Тикетницы" },
+    "1446707256": { kind: "locked", lockId: "ref-1446707256", title: "Креды б2б" }
+  };
   function refView(r) {
+    var editBtn = GH_EDITABLE[String(r.page)] ? '<button class="gh-edit-btn" type="button" data-ghedit="' + attr(String(r.page)) + '">✏️ Редактировать и сохранить в GitHub</button>' : "";
     return '<div class="crumbs"><a href="#/faq">FAQ</a> / Справочник / ' + esc(r.title) + "</div>" +
-      '<h1 class="cat-head">' + esc(r.title) + '</h1><p class="cat-note">' + esc(r.label) + "</p>" +
+      '<h1 class="cat-head">' + esc(r.title) + '</h1><p class="cat-note">' + esc(r.label) + "</p>" + editBtn +
       '<div class="md">' + md(r.md) + "</div>" + sourcesFoot(r.url ? [{ url: r.url, title: "Confluence (" + r.space + ")" }] : []);
+  }
+
+  /* ---- шифрование для сохранения зашифрованных страниц (зеркало credDecrypt) ---- */
+  function credEncrypt(text, pw) {
+    var cs = window.crypto && window.crypto.subtle;
+    if (!cs) return Promise.reject(new Error("nocrypto"));
+    var salt = window.crypto.getRandomValues(new Uint8Array(16));
+    var iv = window.crypto.getRandomValues(new Uint8Array(12));
+    var iter = 600000;
+    var data = new TextEncoder().encode(text);
+    return new Response(new Blob([data]).stream().pipeThrough(new CompressionStream("gzip"))).arrayBuffer().then(function (gz) {
+      return cs.importKey("raw", new TextEncoder().encode(pw), "PBKDF2", false, ["deriveKey"]).then(function (base) {
+        return cs.deriveKey({ name: "PBKDF2", salt: salt, iterations: iter, hash: "SHA-256" }, base, { name: "AES-GCM", length: 256 }, false, ["encrypt"]);
+      }).then(function (key) {
+        return cs.encrypt({ name: "AES-GCM", iv: iv }, key, gz);
+      }).then(function (ctBuf) {
+        var b64 = function (u) { var a = new Uint8Array(u), s = ""; for (var i = 0; i < a.length; i++) s += String.fromCharCode(a[i]); return btoa(s); };
+        return { v: 1, gz: 1, iter: iter, salt: b64(salt), iv: b64(iv), ct: b64(ctBuf) };
+      });
+    });
+  }
+
+  /* ---- редактор страницы с сохранением в GitHub через воркер ---- */
+  function openGhEditor(page) {
+    var conf = GH_EDITABLE[String(page)]; if (!conf) return;
+    if (conf.kind === "locked") {
+      if (!SUPPORT_PW) { alert("Войдите на портал, чтобы редактировать."); return; }
+      credDecrypt(LOCKED[conf.lockId], SUPPORT_PW).then(function (txt) { showGhModal(page, conf, txt); },
+        function () { alert("Не удалось расшифровать страницу для редактирования."); });
+    } else {
+      var rr = (FAQ.reference || []).filter(function (x) { return String(x.page) === String(page); })[0];
+      showGhModal(page, conf, (rr && rr.md) || "");
+    }
+  }
+  function showGhModal(page, conf, mdText) {
+    var ov = document.createElement("div"); ov.className = "gh-ov";
+    ov.innerHTML =
+      '<div class="gh-box">' +
+        '<div class="gh-head"><b>Редактирование: ' + esc(conf.title) + '</b><button class="gh-x" type="button" title="Закрыть">✕</button></div>' +
+        (conf.kind === "locked" ? '<div class="gh-note">🔒 Зашифрованная страница — при сохранении содержимое заново шифруется паролем входа.</div>' : '') +
+        '<textarea class="gh-ta" spellcheck="false"></textarea>' +
+        '<div class="gh-row"><input class="gh-pw" type="password" placeholder="Пароль редактирования" autocomplete="off"></div>' +
+        '<div class="gh-msg"></div>' +
+        '<div class="gh-actions"><button class="gh-save" type="button">Сохранить в GitHub</button><button class="gh-cancel" type="button">Отмена</button></div>' +
+      '</div>';
+    document.body.appendChild(ov);
+    var ta = ov.querySelector(".gh-ta"); ta.value = mdText;
+    var pw = ov.querySelector(".gh-pw"), msg = ov.querySelector(".gh-msg"), saveBtn = ov.querySelector(".gh-save");
+    function close() { ov.remove(); }
+    ov.querySelector(".gh-x").onclick = close;
+    ov.querySelector(".gh-cancel").onclick = close;
+    ov.addEventListener("click", function (e) { if (e.target === ov) close(); });
+    saveBtn.onclick = function () {
+      var text = ta.value, p = pw.value.trim();
+      if (!p) { msg.textContent = "Введите пароль редактирования."; return; }
+      var ep = window.PORTAL_WORKER;
+      if (!ep) { msg.textContent = "Не настроен адрес воркера."; return; }
+      saveBtn.disabled = true; msg.textContent = "Сохраняю…";
+      var prep = conf.kind === "locked"
+        ? credEncrypt(text, SUPPORT_PW).then(function (enc) { return { change: { type: "locked", id: conf.lockId, enc: enc }, enc: enc }; })
+        : Promise.resolve({ change: { type: "refmd", page: String(page), md: text } });
+      prep.then(function (res) {
+        return fetch(ep, { method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ op: "commit", password: p, change: res.change, message: "Правка со страницы: " + conf.title }) })
+          .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j, res: res }; }); });
+      }).then(function (out) {
+        saveBtn.disabled = false;
+        if (out.j && out.j.ok) {
+          msg.textContent = "✅ Сохранено (коммит " + String(out.j.commit || "").slice(0, 7) + "). Сайт обновится через ~1 минуту.";
+          if (conf.kind === "locked") { LOCKED[conf.lockId] = out.res.enc; DATA.locked[conf.lockId] = out.res.enc; }
+          else { var rr = (FAQ.reference || []).filter(function (x) { return String(x.page) === String(page); })[0]; if (rr) rr.md = text; }
+          render();
+          setTimeout(close, 2000);
+        } else {
+          msg.textContent = "⚠️ " + esc((out.j && out.j.error) || "Не удалось сохранить.");
+        }
+      }).catch(function (e) { saveBtn.disabled = false; msg.textContent = "⚠️ " + esc(e.message); });
+    };
+    setTimeout(function () { ta.focus(); }, 50);
   }
 
   /* heading text -> link part: lower case, words joined by "-" (Cyrillic kept) */
@@ -2239,6 +2338,9 @@ If new parameters or features appear in the API, we will let you know.`},
         ev.preventDefault(); ev.stopPropagation();
         copy(location.origin + location.pathname + b.dataset.link, b);
       });
+    });
+    mainEl.querySelectorAll(".gh-edit-btn").forEach(function (b) {
+      b.addEventListener("click", function () { openGhEditor(b.dataset.ghedit); });
     });
     mainEl.querySelectorAll("[data-schema]").forEach(function (a) {
       a.addEventListener("click", function (ev) { ev.preventDefault(); showSchemaModal(a.dataset.schema); });
@@ -2896,6 +2998,7 @@ If new parameters or features appear in the API, we will let you know.`},
   document.getElementById("aiw-mode-web").onclick=function(){ setMode(true); };
 
   /* ---------- внешний хук: передать вопрос из поиска ---------- */
+  window.PORTAL_WORKER=AGENT_ENDPOINT;
   window.PortalAgentReady=function(){ return !!endpoint() && gateOpen(); };
   window.PortalAgentAsk=function(q){
     if(!gateOpen()) return;

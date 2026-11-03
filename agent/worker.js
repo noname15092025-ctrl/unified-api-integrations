@@ -69,12 +69,16 @@ export default {
       return json({ error: "Only POST" }, 405, headers);
     }
 
-    const key = env.GEMINI_API_KEY;
-    if (!key) return json({ error: "GEMINI_API_KEY не задан в воркере" }, 500, headers);
-
     let body;
     try { body = await request.json(); }
     catch { return json({ error: "Плохой JSON" }, 400, headers); }
+
+    // --- Сохранение правки страницы в GitHub (редактор на сайте) ---
+    if (body.op === "commit") return handleCommit(body, env, headers);
+
+    // --- Агент ---
+    const key = env.GEMINI_API_KEY;
+    if (!key) return json({ error: "GEMINI_API_KEY не задан в воркере" }, 500, headers);
 
     const messages = Array.isArray(body.messages) ? body.messages : [];
     const context = typeof body.context === "string" ? body.context.slice(0, 900000) : "";
@@ -146,4 +150,111 @@ function json(obj, status, headers) {
   return new Response(JSON.stringify(obj), {
     status, headers: { ...headers, "Content-Type": "application/json" }
   });
+}
+
+/* ================== Сохранение правки страницы в GitHub ================== */
+
+async function handleCommit(body, env, headers) {
+  const token = env.GITHUB_TOKEN;
+  const editPw = env.EDIT_PASSWORD;
+  if (!token) return json({ error: "GITHUB_TOKEN не задан в воркере" }, 500, headers);
+  if (!editPw) return json({ error: "EDIT_PASSWORD не задан в воркере" }, 500, headers);
+  if (String(body.password || "") !== String(editPw)) return json({ error: "Неверный пароль редактирования" }, 403, headers);
+
+  const change = body.change;
+  if (!change || (change.type !== "refmd" && change.type !== "locked")) {
+    return json({ error: "Некорректная правка" }, 400, headers);
+  }
+  const message = (typeof body.message === "string" && body.message.trim()) || "Правка со страницы портала";
+
+  try {
+    const sha = await githubCommit(env, token, change, message);
+    return json({ ok: true, commit: sha }, 200, headers);
+  } catch (e) {
+    return json({ error: "GitHub: " + e.message }, 502, headers);
+  }
+}
+
+function b64encUtf8(str) {
+  const bytes = new TextEncoder().encode(str);
+  let bin = "";
+  const CH = 0x8000;
+  for (let i = 0; i < bytes.length; i += CH) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CH));
+  return btoa(bin);
+}
+function b64decUtf8(b64) {
+  const bin = atob(String(b64).replace(/\s/g, ""));
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+
+function applyChange(html, change) {
+  const m = html.match(/(<script type="application\/json" id="portal-data">)([\s\S]*?)(<\/script>)/);
+  if (!m) throw new Error("portal-data не найден в index.html");
+  const d = JSON.parse(m[2]);
+  if (change.type === "refmd") {
+    const r = ((d.faq && d.faq.reference) || []).find(x => String(x.page) === String(change.page));
+    if (!r) throw new Error("справочная страница не найдена: " + change.page);
+    r.md = String(change.md);
+  } else if (change.type === "locked") {
+    if (!change.id || !change.enc) throw new Error("нет данных зашифрованного блока");
+    d.locked = d.locked || {};
+    d.locked[change.id] = change.enc;
+  }
+  const nj = JSON.stringify(d);
+  return html.slice(0, m.index) + m[1] + nj + m[3] + html.slice(m.index + m[0].length);
+}
+
+async function githubCommit(env, token, change, message) {
+  const repo = (env.GITHUB_REPO || "noname15092025-ctrl/unified-api-integrations").split("/");
+  const owner = repo[0], name = repo[1];
+  const branch = env.GITHUB_BRANCH || "main";
+  const DUP = "Единая_API_интеграции_актуальная.html";
+  const api = "https://api.github.com";
+  const H = {
+    "Authorization": "Bearer " + token,
+    "Accept": "application/vnd.github+json",
+    "User-Agent": "api-portal-worker",
+    "X-GitHub-Api-Version": "2022-11-28"
+  };
+  const HJ = { ...H, "Content-Type": "application/json" };
+  const gj = async (url, opt) => {
+    const r = await fetch(url, opt);
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error((j && j.message) || ("HTTP " + r.status));
+    return j;
+  };
+
+  const ref = await gj(`${api}/repos/${owner}/${name}/git/ref/heads/${branch}`, { headers: H });
+  const commitSha = ref.object.sha;
+  const commit = await gj(`${api}/repos/${owner}/${name}/git/commits/${commitSha}`, { headers: H });
+  const baseTree = commit.tree.sha;
+
+  const file = await gj(`${api}/repos/${owner}/${name}/contents/index.html?ref=${branch}`, { headers: H });
+  const html = applyChange(b64decUtf8(file.content), change);
+
+  const blob = await gj(`${api}/repos/${owner}/${name}/git/blobs`, {
+    method: "POST", headers: HJ,
+    body: JSON.stringify({ content: b64encUtf8(html), encoding: "base64" })
+  });
+  const tree = await gj(`${api}/repos/${owner}/${name}/git/trees`, {
+    method: "POST", headers: HJ,
+    body: JSON.stringify({
+      base_tree: baseTree,
+      tree: [
+        { path: "index.html", mode: "100644", type: "blob", sha: blob.sha },
+        { path: DUP, mode: "100644", type: "blob", sha: blob.sha }
+      ]
+    })
+  });
+  const newCommit = await gj(`${api}/repos/${owner}/${name}/git/commits`, {
+    method: "POST", headers: HJ,
+    body: JSON.stringify({ message, tree: tree.sha, parents: [commitSha] })
+  });
+  await gj(`${api}/repos/${owner}/${name}/git/refs/heads/${branch}`, {
+    method: "PATCH", headers: HJ,
+    body: JSON.stringify({ sha: newCommit.sha })
+  });
+  return newCommit.sha;
 }
