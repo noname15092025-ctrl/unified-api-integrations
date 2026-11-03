@@ -2772,6 +2772,34 @@ If new parameters or features appear in the API, we will let you know.`},
         chunks.push({title:"["+d.title+"] "+h, text:seg});
       });
     });
+    /* FAQ TG и FAQ Slack (отдельные глобальные списки) */
+    [["FAQ TG", window.TG_FAQ], ["FAQ Slack", window.SL_FAQ]].forEach(function(pair){
+      (pair[1]||[]).forEach(function(it){
+        if(!it || !it.q) return;
+        chunks.push({title:pair[0]+": "+it.q, text:"Вопрос: "+it.q+"\nОтвет: "+(it.a||"")});
+      });
+    });
+    /* Главная страница (HOME): термины, формулы, модели кошельков и т.д. */
+    if(DATA.home && DATA.home.content){
+      var hc=DATA.home.content;
+      hc.split(/\n(?=##\s)/).forEach(function(seg){
+        seg=seg.trim(); if(seg.length<30) return;
+        var h=(seg.match(/^#{2,4}\s+(.+)/)||[null, DATA.home.title||"HOME"])[1];
+        chunks.push({title:"[HOME] "+h, text:seg});
+      });
+      /* каждая строка таблиц (термины/модели) — отдельный чанк, чтобы искался по названию */
+      var SKIPH={"Термин":1,"Провайдер":1,"Ресурс":1,"Модель":1,"Канал":1,"Код":1,"Статус":1};
+      hc.split(/\r?\n/).forEach(function(ln){
+        if(ln.indexOf("|")<0) return;
+        var cells=ln.split("|").map(function(x){return x.trim();});
+        if(cells.length<3) return;
+        var term=(cells[1]||"").replace(/\*\*/g,"").trim();
+        if(!term || /^-+$/.test(term) || SKIPH[term]) return;
+        if(/^-+$/.test((cells[2]||"").replace(/[*\s]/g,""))) return;
+        var rest=cells.slice(2).filter(Boolean).join(" · ").replace(/\*\*/g,"");
+        chunks.push({title:"Термин: "+term, text:term+(rest?" — "+rest:"")});
+      });
+    }
     chunks.forEach(function(ch){ ch.terms=(ch.title+" "+ch.text).toLowerCase().replace(/[^a-zа-я0-9_/]+/gi," ").split(/\s+/).filter(function(w){return w.length>=3;}); });
     return {outline:outline.join("\n"), chunks:chunks};
   }
@@ -2782,9 +2810,12 @@ If new parameters or features appear in the API, we will let you know.`},
     return tokens.concat(extra);
   }
 
+  var AIW_STOP={"что":1,"как":1,"такое":1,"такой":1,"это":1,"этот":1,"для":1,"или":1,"при":1,"где":1,"чем":1,"кто":1,"его":1,"она":1,"они":1,"нужно":1,"надо":1,"можно":1,"есть":1,"быть":1,"если":1,"тоже":1,"также":1,"все":1,"всё":1,"так":1,"вот":1,"уже":1,"еще":1,"ещё":1,"мне":1,"меня":1,"наш":1,"наши":1,"the":1,"and":1,"for":1,"what":1,"how":1,"does":1,"your":1,"you":1,"are":1,"can":1};
   function pickContext(query){
     if(!KB) KB=buildKB();
     var toks=query.toLowerCase().replace(/[^a-zа-я0-9_/]+/gi," ").split(/\s+/).filter(function(w){return w.length>=3;});
+    var kept=toks.filter(function(w){return !AIW_STOP[w];});
+    if(kept.length) toks=kept;
     toks=expand(toks);
     var uniq={}; toks.forEach(function(t){uniq[t]=1;}); toks=Object.keys(uniq);
     var scored=KB.chunks.map(function(ch){
