@@ -2803,6 +2803,17 @@ If new parameters or features appear in the API, we will let you know.`},
         chunks.push({title:"Термин: "+term, text:term+(rest?" — "+rest:"")});
       });
     }
+    /* обогащаем чанки русским переводом из PORTAL_RU, чтобы агент находил
+       англоязычные блоки (напр. вопросы провайдера Mancala) и по русским запросам */
+    try{
+      var _RU=window.PORTAL_RU||{};
+      var _norm=function(s){return String(s).replace(/!\[[^\]]*\]\([^)]*\)/g," ").replace(/\[([^\]]+)\]\([^)]*\)/g,"$1").replace(/^\s*(#+|[-*+>]|\d+[.)])\s+/,"").replace(/[`*]+/g,"").replace(/\s+/g," ").trim();};
+      chunks.forEach(function(ch){
+        var seen={}, add=[];
+        String(ch.title+"\n"+ch.text).split(/\n|\|/).forEach(function(seg){ var r=_RU[_norm(seg)]; if(r&&!seen[r]){ seen[r]=1; add.push(r); } });
+        if(add.length) ch.text+="\n"+add.join("\n");
+      });
+    }catch(e){}
     chunks.forEach(function(ch){ ch.terms=(ch.title+" "+ch.text).toLowerCase().replace(/[^a-zа-я0-9_/]+/gi," ").split(/\s+/).filter(function(w){return w.length>=3;}); });
     return {outline:outline.join("\n"), chunks:chunks};
   }
