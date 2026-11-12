@@ -1810,9 +1810,31 @@ If new parameters or features appear in the API, we will let you know.`},
   function docView(doc) { return '<div class="crumbs">Справочные материалы</div><h1 class="page">'+esc(doc.title)+'</h1>'+docDownload(doc)+'<div class="md doc-body">'+md(doc.content)+'</div>'+sourcesFoot(docSources(doc),doc.sourceLabel); }
 
   function renderSideFaq(filter) {
-    /* Левая панель-оглавление FAQ убрана по запросу: навигация идёт через
-       карточки категорий на главной FAQ и хлебные крошки. */
-    return "";
+    /* Содержание FAQ: категории → страницы-источники (с числом вопросов). */
+    var f = (filter || "").toLowerCase();
+    var h = '<div class="side-search"><input id="faq-filter" placeholder="Фильтр по вопросам…" value="' + attr(filter || "") + '"></div>';
+    h += '<button class="op-link' + (!S.cat ? " active" : "") + '" data-nav="#/faq"><span class="p">Содержание FAQ</span></button>';
+    FAQ.categories.forEach(function (cat) {
+      var blocks = cat.blocks.filter(function (b) {
+        return !f || cat.title.toLowerCase().indexOf(f) >= 0 || b.title.toLowerCase().indexOf(f) >= 0 ||
+          b.pairs.some(function (p) { return tgMatches(p, f); });
+      });
+      if (!blocks.length) return;
+      var qn = cat.blocks.reduce(function (a, b) { return a + b.pairs.length; }, 0);
+      var openCat = (S.cat === cat.id) || !!f;
+      h += '<div class="grp' + (openCat ? "" : " collapsed") + '"><button type="button">' +
+        '<span class="chev">▼</span>' + esc(cat.title) +
+        ' <span style="color:var(--muted);font-weight:600">' + qn + "</span></button>";
+      h += '<div class="grp-items">';
+      blocks.forEach(function (b) {
+        var active = S.cat === cat.id && String(S.page) === String(b.page);
+        h += '<button class="op-link' + (active ? " active" : "") + '" data-nav="#/faq/' + cat.id + "/" + b.page + '">' +
+          '<span class="p">' + esc(b.title) +
+          ' <span style="color:var(--muted)">' + b.pairs.length + "</span></span></button>";
+      });
+      h += "</div></div>";
+    });
+    return h;
   }
 
   /* ---------------------------------------------------------- FAQ TG */
