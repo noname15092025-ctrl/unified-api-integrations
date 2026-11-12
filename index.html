@@ -1810,19 +1810,9 @@ If new parameters or features appear in the API, we will let you know.`},
   function docView(doc) { return '<div class="crumbs">Справочные материалы</div><h1 class="page">'+esc(doc.title)+'</h1>'+docDownload(doc)+'<div class="md doc-body">'+md(doc.content)+'</div>'+sourcesFoot(docSources(doc),doc.sourceLabel); }
 
   function renderSideFaq(filter) {
-    var f = (filter || "").toLowerCase();
-    var h = '<div class="side-search"><input id="faq-filter" placeholder="Фильтр по вопросам…" value="' + attr(filter || "") + '"></div>';
-    h += '<div class="grp"><div class="grp-items">';
-    FAQ.categories.forEach(function (cat) {
-      var matches = !f || cat.title.toLowerCase().indexOf(f) >= 0 || cat.blocks.some(function (b) {
-        return b.pairs.some(function (p) { return tgMatches(p, f); });
-      });
-      if (!matches) return;
-      h += '<button class="op-link' + (S.cat === cat.id && !S.page ? " active" : "") + '" data-nav="#/faq/' + cat.id + '">' +
-        '<span class="p">' + esc(cat.title) + "</span></button>";
-    });
-    h += "</div></div>";
-    return h;
+    /* Левая панель-оглавление FAQ убрана по запросу: навигация идёт через
+       карточки категорий на главной FAQ и хлебные крошки. */
+    return "";
   }
 
   /* ---------------------------------------------------------- FAQ TG */
