@@ -253,7 +253,10 @@ p.lead { color: var(--muted); margin: 0 0 20px; font-size: 14px; }
 .file-download-box { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; border: 1px solid var(--line-2); background: var(--panel-2); border-radius: 8px; padding: 12px 14px; margin: 22px 0; }
 .file-download-info { flex: 1 1 auto; min-width: 0; }
 .file-download { display: inline-flex; align-items: center; border: 1px solid var(--accent); border-radius: 7px; padding: 7px 11px; color: var(--accent); font-weight: 700; text-decoration: none; }
-.file-download-box > .file-download { margin-left: auto; flex-shrink: 0; }
+.file-download-box > .file-download { flex-shrink: 0; }
+.file-download-actions { margin-left: auto; display: inline-flex; gap: 8px; flex-shrink: 0; flex-wrap: wrap; }
+.file-open { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 7px; padding: 7px 11px; color: var(--ink); font-weight: 700; text-decoration: none; background: var(--panel); }
+.file-open:hover { border-color: var(--accent); color: var(--accent); }
 .file-download:hover { background: var(--accent-soft); }
 
 .op-head { border-bottom: 1px solid var(--line); padding-bottom: 14px; margin-bottom: 18px; }
@@ -1609,7 +1612,10 @@ If new parameters or features appear in the API, we will let you know.`},
     var info = [], btn = "";
     if (file) {
       info.push("<span>Файл: <code>" + esc(file.name) + "</code></span>");
-      btn = '<a class="file-download" href="' + attr(file.href) + '" download="' + attr(file.download || "") + '">' + esc(label || "Скачать PDF") + "</a>";
+      btn = '<div class="file-download-actions">' +
+        '<a class="file-open" href="' + attr(file.href) + '" target="_blank" rel="noopener">Открыть файл</a>' +
+        '<a class="file-download" href="' + attr(file.href) + '" download="' + attr(file.download || "") + '">' + esc(label || "Скачать PDF") + "</a>" +
+        "</div>";
     }
     if (sources) info.push(sources);
     if (!info.length) return "";
