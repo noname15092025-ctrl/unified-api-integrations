@@ -270,10 +270,12 @@ h2.sec {
 }
 h3.sub { font-size: 15px; margin: 20px 0 8px; }
 
-table.tbl { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+table.tbl { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13.5px; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.05); }
 table.tbl th, table.tbl td {
-  text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line-2); vertical-align: top;
+  text-align: left; padding: 8px 11px; border-bottom: 1px solid var(--line-2); vertical-align: top;
 }
+table.tbl tr:last-child td { border-bottom: none; }
+table.tbl tbody tr:hover td { background: var(--accent-soft); }
 table.tbl th {
   font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted);
   background: var(--panel-2); border-bottom: 1px solid var(--line); font-weight: 700;
@@ -398,9 +400,14 @@ details.sch > summary::-webkit-details-marker { display: none; }
 .md p { margin: 8px 0; }
 .md ul { margin: 8px 0; padding-left: 22px; }
 .md li { margin: 3px 0; }
-.md table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0; }
-.md th, .md td { border: 1px solid var(--line); padding: 6px 9px; text-align: left; vertical-align: top; }
-.md th { background: var(--panel-2); }
+.md table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; margin: 14px 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.05); }
+.md th, .md td { padding: 8px 11px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); border-right: 1px solid var(--line); }
+.md th:last-child, .md td:last-child { border-right: none; }
+.md tr:last-child td { border-bottom: none; }
+.md th { background: var(--panel-2); font-weight: 600; white-space: nowrap; }
+.md tbody tr:nth-child(even) td { background: rgba(130,130,130,.045); }
+.md tbody tr:hover td { background: var(--accent-soft); }
+.md td:first-child { white-space: nowrap; }
 .md pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 7px; padding: 11px 13px; overflow: auto; }
 .md code { font-family: var(--mono); font-size: 12.5px; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
 .md pre code { background: none; padding: 0; }
