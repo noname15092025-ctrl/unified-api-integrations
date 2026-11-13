@@ -67,6 +67,12 @@ const CASES = [
     text: `curl -X POST 'https://transaction.agg.bet/api/v1/b2b/token' -H 'Content-Type: application/json' -d '{"api_key":"k","b2b_id":"test_player"}'` },
   { name: "Mancala: строка для Hash", exp: { op: "POST /api/v1/vendor/Debit", has: ["Строка для Hash: \"Debit/\" + SessionId(s1)"] },
     text: `POST https://89ad7ebc673211ed90220242ac120002.transaction.uat.agg.bet/api/v1/vendor/Debit\nContent-Type: application/json\n\n{"SessionId":"s1","RoundGuid":"r1","TransactionGuid":"t1","Amount":2.5,"DebitType":2,"Hash":"0123456789abcdef0123456789abcdef","BonusTransaction":false,"ExternalBonusId":""}` },
+  { name: "Код бэкофиса по code: 408", exp: { has: ["Код бэкофиса 408 (Integration)"] },
+    text: `Ответ:\n{"code":408,"message":"connection is not found"}` },
+  { name: "Код бэкофиса по тексту + детали", exp: { has: ["Код бэкофиса 401 (Integration)", "Детали: something happened wrong"] },
+    text: `curl -X POST 'https://transaction.uat.agg.bet/api/v1/b2b/deposit' -H 'Content-Type: application/json' -d '{}'\nОтвет: {"error":"invalid argument: something happened wrong"}` },
+  { name: "Код бэкофиса из простого текста: 434", exp: { has: ["Код бэкофиса 434"] },
+    text: `Ответ:\nerror: available bet not found: bet does exists or has been deleted` },
   { name: "Секреты не попадают в текст для ИИ", exp: { op: "POST /api/v1/b2b/token", maskedNot: ["testkey0000", "eyJhbGciOiJIUzI1NiJ9.eyJleHAiOjF9.c2lnbmF0dXJl"] },
     text: `curl -X POST 'https://transaction.uat.agg.bet/api/v1/b2b/token' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJleHAiOjF9.c2lnbmF0dXJl' -H 'Content-Type: application/json' -d '${TOKEN_BODY}'` }
 ];
