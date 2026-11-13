@@ -57,6 +57,16 @@ const CASES = [
     text: `Ответ:\nerror: client_id is expected as UUID` },
   { name: "Go-лог: URL строкой, Method:POST, Headers:map / Body:map", exp: { op: "POST /api/v1/b2b/deposit", has: ["лог Go-сервиса", "Обязательные поля на месте"], not: ["Тела запроса нет"] },
     text: `https://transaction.uat.agg.bet/api/v1/b2b/deposit\nMethod:POST\n\nHeaders:map[Authorization:Bearer <token> Content-Type:application/json b2b-client-id:${UUID} vendor-id:89ad7ebc-6732-11ed-9022-0242ac120002]\n\nBody:map[amount:100 b2c_id:test_player currency:BRL transaction_id:00291d2529] Timeout:60}` },
+  { name: "Связь ответа с запросом: client-id не UUID", exp: { has: ["заголовок client-id = \"12345\" — это не UUID"] },
+    text: `curl -X POST 'https://transaction.uat.agg.bet/api/v1/gate/deposit' -H 'client-id: 12345' -H 'Content-Type: application/json' -d '{}'\nОтвет: {"error":"\\"client_id\\" is expected as UUID"}` },
+  { name: "Связь ответа с запросом: connection not found → пара ID", exp: { has: ["В запросе: b2b-client-id = " + UUID] },
+    text: `curl -X POST 'https://transaction.uat.agg.bet/api/v1/b2b/deposit' -H 'b2b-client-id: ${UUID}' -H 'vendor-id: 8f3d22d6-591f-11ed-9b6a-0242ac120002' -H 'Content-Type: application/json' -d '{}'\nОтвет: {"error":"b2b ID=\\"x\\", vendor ID=\\"y\\": connection not found"}` },
+  { name: "Round Check: round_id <vendor_id>_<round>", exp: { op: "POST /api/v1/b2b/reports/round-check", has: ["вендор Winfinity"] },
+    text: `curl -X POST 'https://transaction.uat.agg.bet/api/v1/b2b/reports/round-check' -H 'Content-Type: application/json' -d '{"round_id":"8f3d22d6-591f-11ed-9b6a-0242ac120002_abc","b2c_id":"1","game_id":"g"}'` },
+  { name: "PROD-хост и тестовые данные", exp: { has: ["тестовые признаки"] },
+    text: `curl -X POST 'https://transaction.agg.bet/api/v1/b2b/token' -H 'Content-Type: application/json' -d '{"api_key":"k","b2b_id":"test_player"}'` },
+  { name: "Mancala: строка для Hash", exp: { op: "POST /api/v1/vendor/Debit", has: ["Строка для Hash: \"Debit/\" + SessionId(s1)"] },
+    text: `POST https://89ad7ebc673211ed90220242ac120002.transaction.uat.agg.bet/api/v1/vendor/Debit\nContent-Type: application/json\n\n{"SessionId":"s1","RoundGuid":"r1","TransactionGuid":"t1","Amount":2.5,"DebitType":2,"Hash":"0123456789abcdef0123456789abcdef","BonusTransaction":false,"ExternalBonusId":""}` },
   { name: "Секреты не попадают в текст для ИИ", exp: { op: "POST /api/v1/b2b/token", maskedNot: ["testkey0000", "eyJhbGciOiJIUzI1NiJ9.eyJleHAiOjF9.c2lnbmF0dXJl"] },
     text: `curl -X POST 'https://transaction.uat.agg.bet/api/v1/b2b/token' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJleHAiOjF9.c2lnbmF0dXJl' -H 'Content-Type: application/json' -d '${TOKEN_BODY}'` }
 ];
@@ -85,8 +95,23 @@ const CASES = [
     if (problems.length) { fail++; console.log("  ✗ " + c.name + " — " + problems.join("; ")); }
     else console.log("  ✓ " + c.name);
   }
+  /* «Исправить запрос» и MD5 */
+  const extra = await page.evaluate(() => {
+    const f = window.PortalCheck.fix(`curl -X GET "http://transaction.uat.agg.bet/api/v1/b2b/start/game/" -H "b2b-client-id: 11111111-2222-4333-8444-555555555555" -d "{\\"gameId\\":\\"x\\",\\"is_test\\":\\"true\\",\\"browser_session\\":{\\"device\\":\\"Desktop\\"}}"`);
+    return { curl: f && f.curl, changes: f && f.changes.join(" | "), md5: window.PortalCheck.md5("hello") };
+  });
+  const fixChecks = [
+    ["md5", extra.md5 === "5d41402abc4b2a76b9719d911017c592"],
+    ["метод и https", /^curl -X POST 'https:\/\/transaction\.uat\.agg\.bet\/api\/v1\/b2b\/start\/game'/.test(extra.curl || "")],
+    ["Bearer-плейсхолдер", /Authorization: Bearer <token>/.test(extra.curl || "")],
+    ["опечатка gameId → game_id", /"game_id": "x"/.test(extra.curl || "")],
+    ["boolean без кавычек", /"is_test": true/.test(extra.curl || "")],
+    ["регистр enum", /"device": "desktop"/.test(extra.curl || "")],
+    ["плейсхолдеры обязательных", /обязательные поля с плейсхолдерами/.test(extra.changes || "")]
+  ];
+  fixChecks.forEach((c) => { if (c[1]) console.log("  ✓ Исправить запрос: " + c[0]); else { fail++; console.log("  ✗ Исправить запрос: " + c[0]); } });
   if (errors.length) { fail++; console.log("  ✗ ошибки JS: " + errors.join(" | ")); }
-  console.log(`\n${CASES.length - fail + (errors.length ? 1 : 0)} пройдено, ${fail} упало`);
+  console.log(`\n${CASES.length + 7 - fail + (errors.length ? 1 : 0)} пройдено, ${fail} упало`);
   await browser.close();
   process.exit(fail ? 1 : 0);
 })();
