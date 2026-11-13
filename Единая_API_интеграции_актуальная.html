@@ -2308,6 +2308,7 @@ If new parameters or features appear in the API, we will let you know.`},
   var CHK_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
   function chkC(s) { return "<code>" + esc(String(s)) + "</code>"; }
+  function chkValLong(v) { var s = typeof v === "string" ? JSON.stringify(v) : String(v); if (s.length > 400) s = s.slice(0, 397) + "…"; return chkC(s); }
   function chkVal(v) { var s; try { s = JSON.stringify(v); } catch (e) { s = String(v); } if (s === undefined) s = String(v); if (s.length > 70) s = s.slice(0, 67) + "…"; return chkC(s); }
   function chkIsPh(v) { v = String(v == null ? "" : v).trim(); return /^<[^>]*>$/.test(v) || /^\{\{[^}]*\}\}$/.test(v) || /^\$\{?\w+\}?$/.test(v) || /^(Bearer\s+)?(<[^>]*>|\{\{[^}]*\}\}|\.\.\.|…|xxx+|token)$/i.test(v); }
   function chkDist(a, b) {
@@ -2380,6 +2381,22 @@ If new parameters or features appear in the API, we will let you know.`},
     var m = /^[ \t]*(?:ответ|тело ответа|response body|response|resp)[ \t]*(?::[ \t]*(.*))?[ \t]*$/im.exec(t) ||
       /^[^"'{}\n]*?\b(?:got|get|getting|received|this|the)?\s*(?:response|ответ)\b[^"'{}:\n]*:[ \t]*([\[{].*)?$/im.exec(t);
     if (!m) {
+      /* curl, а сразу за ним (без «Ответ:») — JSON ответа */
+      var cs = t.search(/(^|\n)[ \t]*curl(\.exe)?\s/i);
+      if (cs >= 0) {
+        var q = null, i = cs, n = t.length;
+        for (; i < n; i++) {
+          var ch = t[i];
+          if (q) { if (ch === "\\" && q !== "'") i++; else if (ch === q) q = null; continue; }
+          if (ch === "'" || ch === '"') { q = ch; continue; }
+          if (ch === "\n" && i > cs + 5) {
+            var prev = t.slice(cs, i).replace(/[ \t]+$/, "");
+            if (!/[\\^`]$/.test(prev)) break;
+          }
+        }
+        var tail = t.slice(i).trim();
+        if (tail && /^([{\[]|HTTP\/|status_code|array\s*\()/i.test(tail)) return { req: t.slice(0, i), resp: tail };
+      }
       var hm = /\n[ \t]*(HTTP\/[\d.]+\s+\d{3}[^\n]*)/.exec(t);
       if (hm && /\S/.test(t.slice(0, hm.index))) return { req: t.slice(0, hm.index), resp: t.slice(hm.index + 1).trim() };
       /* JSON-лог вида {"request": {...}, "response": {...}} */
@@ -2936,7 +2953,7 @@ If new parameters or features appear in the API, we will let you know.`},
       if (ro && typeof ro === "object" && !Array.isArray(ro)) {
         var es = typeof ro.error === "string" ? ro.error : ro.error && typeof ro.error === "object" ? (ro.error.code != null ? ro.error.code + " " : "") + (ro.error.message || "") : typeof ro.Msg === "string" && ro.Error ? ro.Error + " " + ro.Msg : "";
         if (es) {
-          add(CHK_G.resp, "err", "API вернул ошибку: " + chkVal(es) + '. <a href="#/search/' + encodeURIComponent(String(es).slice(0, 60)) + '">Искать по порталу →</a>');
+          add(CHK_G.resp, "err", "API вернул ошибку: " + chkValLong(es) + '. <a href="#/search/' + encodeURIComponent(String(es).slice(0, 60)) + '">Искать по порталу →</a>');
           CHK_KE.forEach(function (k) { if (k[0].test(es)) add(CHK_G.resp, "info", k[1]); });
           if (/internal/i.test(es)) add(CHK_G.resp, "info", "«Internal error» — сбой на стороне сервера; передайте в разработку время запроса, b2b-client-id и тело запроса.");
           var ids = String(es).match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi) || [];
@@ -3214,7 +3231,7 @@ If new parameters or features appear in the API, we will let you know.`},
               else add(CHK_G.resp, "err", chkC(kv[0]) + " = <b>" + kv[1] + "</b>" + (MC[kv[1]] ? ": " + esc(MC[kv[1]]) : "") + (rv.Msg || rv.Message ? " (" + chkVal(rv.Msg || rv.Message) + ")" : "") + ".");
             });
           }
-          if (errStr) add(CHK_G.resp, "err", "API вернул ошибку: " + chkVal(errStr) + '. <a href="#/search/' + encodeURIComponent(errStr.slice(0, 60)) + '">Искать по порталу →</a>');
+          if (errStr) add(CHK_G.resp, "err", "API вернул ошибку: " + chkValLong(errStr) + '. <a href="#/search/' + encodeURIComponent(errStr.slice(0, 60)) + '">Искать по порталу →</a>');
           if (errStr) CHK_KE.forEach(function (k) { if (k[0].test(errStr)) add(CHK_G.resp, "info", k[1]); });
           if (errStr && /internal/i.test(errStr)) add(CHK_G.resp, "info", "«Internal error» — сбой на стороне сервера, а не ошибка формата запроса. Если по запросу выше ошибок нет, передайте в разработку время запроса" + (lt ? " (" + esc(lt.raw) + ")" : "") + ", " + chkC("b2b-client-id") + " и тело запроса — по ним найдут запрос в логах.");
           if (rv.error_code != null && rv.error_code !== 0 && rv.error_code !== "0") add(CHK_G.resp, "err", chkC("error_code") + " = " + chkVal(rv.error_code) + (CHK_ERR_CODES[rv.error_code] ? ": " + esc(CHK_ERR_CODES[rv.error_code]) : "") + (rv.error_message ? " (" + chkC("error_message") + ": " + chkVal(rv.error_message) + ")" : "") + ".");
