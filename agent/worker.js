@@ -34,6 +34,22 @@ const PORTAL_PROMPT = [
   "   а не истина в последней инстанции."
 ].join("\n");
 
+const CHECK_PROMPT = [
+  "Ты — ревьюер запросов к API портала. Тебе дают запрос пользователя (curl/HTTP, иногда с ответом),",
+  "документацию нужного эндпоинта и результат автоматической проверки портала.",
+  "",
+  "ПРАВИЛА:",
+  "1. Отвечай на русском, в Markdown, кратко.",
+  "2. Структура: **Вердикт** (одна строка) → **Ошибки и как исправить** (список) →",
+  "   **Замечания** (если есть) → **Исправленный запрос** (curl в блоке кода).",
+  "3. Опирайся ТОЛЬКО на документацию и автопроверку. Автопроверка детерминирована —",
+  "   не противоречь её ошибкам; можешь объяснить их и добавить очевидные выводы.",
+  "4. Значения <скрыт>/<скрыто>/<token> — замаскированные секреты, это не ошибка.",
+  "   В исправленном запросе тоже оставляй плейсхолдеры, никогда не придумывай токены.",
+  "5. Если эндпоинт не найден — скажи об этом и предложи ближайшие из документации.",
+  "6. Не выдумывай поля и правила, которых нет в материалах."
+].join("\n");
+
 const WEB_PROMPT = [
   "Это РЕЖИМ ОБЩЕГО ОТВЕТА: пользователь не нашёл ответ во внутренней документации",
   "портала и просит общий ответ. Отвечай на основе своих общих знаний (модель",
@@ -78,7 +94,7 @@ export default {
 
     const messages = Array.isArray(body.messages) ? body.messages : [];
     const context = typeof body.context === "string" ? body.context.slice(0, 900000) : "";
-    const mode = body.mode === "web" ? "web" : "portal";
+    const mode = body.mode === "web" ? "web" : body.mode === "check" ? "check" : "portal";
     if (!messages.length) return json({ error: "Пустой запрос" }, 400, headers);
 
     const model = (env.MODEL || "gemini-2.5-flash-lite").trim();
@@ -90,12 +106,14 @@ export default {
 
     const sys = mode === "web"
       ? WEB_PROMPT
+      : mode === "check"
+      ? CHECK_PROMPT + "\n\n===== МАТЕРИАЛЫ ДЛЯ ПРОВЕРКИ =====\n" + context
       : PORTAL_PROMPT + "\n\n===== МАТЕРИАЛЫ ПОРТАЛА (используй как единственный источник) =====\n" + context;
 
     const payload = {
       system_instruction: { parts: [{ text: sys }] },
       contents,
-      generationConfig: { temperature: mode === "web" ? 0.4 : 0.2, maxOutputTokens: 1600, topP: 0.9 },
+      generationConfig: { temperature: mode === "web" ? 0.4 : mode === "check" ? 0.1 : 0.2, maxOutputTokens: 1600, topP: 0.9 },
       safetySettings: [
         "HARM_CATEGORY_HARASSMENT", "HARM_CATEGORY_HATE_SPEECH",
         "HARM_CATEGORY_SEXUALLY_EXPLICIT", "HARM_CATEGORY_DANGEROUS_CONTENT"

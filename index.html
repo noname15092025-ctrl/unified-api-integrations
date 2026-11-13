@@ -618,6 +618,28 @@ body.editing .has-ru { text-decoration: none; }
 .theme-toggle .ico-sun { display: none; }
 :root[data-theme="dark"] .theme-toggle .ico-sun { display: block; }
 :root[data-theme="dark"] .theme-toggle .ico-moon { display: none; }
+.chk-form{display:flex;flex-direction:column;gap:6px;margin:16px 0}
+.chk-lbl{font-weight:600;font-size:13px;margin-top:8px}.chk-lbl span{font-weight:400;color:var(--muted,#888);margin-left:6px}
+.chk-ta,.chk-sel,.chk-inp{width:100%;box-sizing:border-box;font:13px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;padding:10px 12px;border:1px solid var(--line,#ccc);border-radius:10px;background:var(--bg,#fff);color:inherit;resize:vertical}
+.chk-sel,.chk-inp{font-family:inherit;resize:none}
+.chk-grid{display:grid;grid-template-columns:1fr 160px;gap:12px}@media(max-width:640px){.chk-grid{grid-template-columns:1fr}}
+.chk-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0}
+.chk-btn{padding:8px 16px;border-radius:10px;border:1px solid var(--line,#ccc);background:transparent;color:inherit;cursor:pointer;font:inherit}
+.chk-btn:hover{border-color:var(--accent,#4f7cff)}.chk-primary{background:var(--accent,#4f7cff);border-color:var(--accent,#4f7cff);color:#fff;font-weight:600}
+.chk-ex{color:var(--muted,#888);font-size:13px}.chk-ex button{margin-left:6px;background:none;border:none;color:var(--accent,#4f7cff);cursor:pointer;text-decoration:underline;font:inherit}
+.chk-sum{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;padding:12px 16px;border-radius:12px;margin:16px 0;border:1px solid}
+.chk-s-ok{background:rgba(34,160,90,.1);border-color:rgba(34,160,90,.45)}.chk-s-warn{background:rgba(220,150,20,.1);border-color:rgba(220,150,20,.5)}.chk-s-err{background:rgba(220,60,60,.1);border-color:rgba(220,60,60,.5)}
+.chk-counts i{font-style:normal;font-size:12px;margin-left:10px}.chk-n-err{color:#d24545}.chk-n-warn{color:#c58a10}.chk-n-ok{color:#22a05a}
+.chk-alts{margin:10px 0;font-size:13px}.chk-alt{margin:4px 6px 0 0;padding:4px 10px;border-radius:8px;border:1px solid var(--line,#ccc);background:none;color:inherit;cursor:pointer}.chk-alt.is-on{border-color:var(--accent,#4f7cff)}
+.chk-group{font-size:14px;margin:18px 0 6px}
+.chk-list{list-style:none;padding:0;margin:0;border:1px solid var(--line,#ddd);border-radius:12px;overflow:hidden}
+.chk-list li{padding:8px 12px 8px 34px;position:relative;border-top:1px solid var(--line,#eee);font-size:13.5px;line-height:1.5;overflow-wrap:anywhere}.chk-list li:first-child{border-top:none}
+.chk-list li::before{position:absolute;left:12px;top:8px;font-weight:700}
+.chk-l-ok::before{content:"✓";color:#22a05a}.chk-l-err::before{content:"✕";color:#d24545}.chk-l-warn::before{content:"!";color:#c58a10}.chk-l-info::before{content:"i";color:var(--muted,#888)}
+.chk-l-err{background:rgba(220,60,60,.05)}
+.chk-foot{font-size:12px;color:var(--muted,#888)}
+.chk-side div{padding:4px 0;font-size:13px;line-height:1.45}
+.chk-link{margin:6px 0 0;font-size:13px}
 </style>
 <script>(function(){var t=null;try{t=localStorage.getItem("portal-theme");}catch(e){}if(!t&&window.matchMedia&&matchMedia("(prefers-color-scheme: dark)").matches)t="dark";if(t==="dark")document.documentElement.setAttribute("data-theme","dark");})();</script>
 </head>
@@ -665,6 +687,7 @@ body.editing .has-ru { text-decoration: none; }
     <button class="tab" data-tab="round-check">Round Check (JSON)<span class="cnt">1</span></button>
     <button class="tab" data-tab="bet-history">Bet History<span class="cnt">1</span></button>
     <button class="tab" data-tab="broit">BroIT Slots<span class="cnt">13</span></button>
+    <button class="tab" data-tab="check">Проверка запроса<span class="cnt">0</span></button>
     <button class="tab" data-tab="doc-backoffice">Back Office<span class="cnt">0</span></button>
     <button class="tab" data-tab="doc-incidents">Incident Management<span class="cnt">0</span></button>
     <button class="tab" data-tab="doc-postman">Postman<span class="cnt">0</span></button>
@@ -1212,6 +1235,7 @@ If new parameters or features appear in the API, we will let you know.`},
         text: withRu((r.label + " \n " + r.title + " \n " + r.md).toLowerCase(), r.md)
       });
     });
+    IDX.push({ kind: "tool", tag: "Инструмент", title: "Проверка запроса", sub: "Сверка curl / запроса и ответа с документацией", plain: "Вставьте curl или запрос — портал проверит URL, метод, заголовки, обязательные поля, типы и ответ.", text: "проверка запроса проверить запрос валидация validate validator curl request response ответ обязательные поля required headers заголовки ошибка error check" });
     return IDX;
   }
 
@@ -1314,6 +1338,14 @@ If new parameters or features appear in the API, we will let you know.`},
     if (p[0] === "ref" && p[1] === "1331003443") p = ["doc-postman"];
     if (p[0] === "ref" && p[1] === "1424949252") p = ["faq"];
     if (p[0] === "ref" && (p[1] === "1535901801" || p[1] === "416121362")) p = ["faq"];
+    if (p[0] === "check") {
+      S.tab = "check";
+      if (p[1] && p[2] && APIS[p[1]] && APIS[p[1]].operations[p[2]]) {
+        var v = p[1] + "|" + p[2];
+        if (CHK.pick !== v || !CHK.req) { CHK.pick = v; CHK.req = curlFor(APIS[p[1]], APIS[p[1]].operations[p[2]]); CHK.resp = ""; CHK.code = ""; CHK.res = null; CHK.tpl = true; }
+      }
+      return;
+    }
     if (APIS[p[0]]) {
       S.tab = p[0]; S.api = p[0]; S.uid = p[1] || null; return;
     }
@@ -1545,7 +1577,7 @@ If new parameters or features appear in the API, we will let you know.`},
       }
     }
 
-    h += '<h2 class="sec">Пример запроса</h2>' + codeBlock(curlFor(api, op), true);
+    h += '<h2 class="sec">Пример запроса</h2>' + codeBlock(curlFor(api, op), true) + '<p class="chk-link"><a href="#/check/' + api.key + '/' + encodeURIComponent(op.uid) + '">🧪 Проверить свой запрос к этому эндпоинту →</a></p>';
 
     h += '<h2 class="sec">Ответы</h2>';
     (op.responses || []).forEach(function (r, i) {
@@ -2188,7 +2220,7 @@ If new parameters or features appear in the API, we will let you know.`},
   var TAB_RU = {
     "b2b": "API для B2B-компаний (операторов)", "aggr": "API провайдера", "mancala": "B2B API Mancala", "broit": "Слоты BroIT",
     "mancala-fs": "Бонусы фриспинов Mancala", "round-check": "Проверка раунда (JSON)", "bet-history": "История ставок",
-    "doc-backoffice": "Бэк-офис", "doc-incidents": "Управление инцидентами", "doc-postman": "Работа с API в Postman", "doc-testops": "Тестирование провайдера перед Live", "faq": "Часто задаваемые вопросы",
+    "doc-backoffice": "Бэк-офис", "doc-incidents": "Управление инцидентами", "doc-postman": "Работа с API в Postman", "doc-testops": "Тестирование провайдера перед Live", "faq": "Часто задаваемые вопросы", "check": "Проверка запроса и ответа по документации",
     "faq-tg": "Часто задаваемые вопросы из Telegram", "faq-slack": "Вопросы и ответы поддержки из Slack"
   };
   function markChrome() {
@@ -2223,6 +2255,818 @@ If new parameters or features appear in the API, we will let you know.`},
   /* ---------------------------------------------------------- main render */
   var mainEl, sideEl;
 
+  /* ====================================================================
+     Проверка запроса: разбор curl / HTTP-текста и сверка со схемами портала.
+     Всё выполняется в браузере, наружу ничего не отправляется.
+     ==================================================================== */
+  var CHK_HOSTS = {
+    "transaction.uat.agg.bet": { env: "UAT (staging)", fam: "agg" },
+    "transaction.agg.bet": { env: "PROD", fam: "agg", prod: true },
+    "transaction.develop.agg.bet": { env: "DEV", fam: "agg" },
+    "transaction.uat.softgga.dev": { env: "UAT (staging) Mancala", fam: "mancala" },
+    "transaction.softgga.bet": { env: "PROD Mancala", fam: "mancala", prod: true }
+  };
+  var CHK_FAM = { b2b: "agg", aggr: "agg", "round-check": "agg", "bet-history": "agg", mancala: "mancala", "mancala-fs": "mancala" };
+  var CHK_FAM_HOSTS = {
+    agg: "UAT — transaction.uat.agg.bet, PROD — transaction.agg.bet",
+    mancala: "UAT — transaction.uat.softgga.dev, PROD — transaction.softgga.bet"
+  };
+  var CHK_ERR_CODES = { 0: "success — успешная обработка", 1: "insufficient funds — недостаточно средств", 2: "player blocked / player not found — игрок заблокирован или не найден",
+    3: "hash mismatch — хэш запроса не совпадает", 4: "transaction not found — транзакция не найдена", 5: "invalid amount — недопустимая сумма",
+    6: "invalid transaction — недопустимая транзакция", 9: "invalid argument — неверный аргумент запроса" };
+  var CHK_SECRET = /pass|secret|token|api[_-]?key|authorization|signature|^hash$|cookie/i;
+  var CHK_G = { url: "Эндпоинт и URL", head: "Заголовки", query: "Параметры строки запроса", body: "Тело запроса", resp: "Ответ" };
+  var CHK_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  function chkC(s) { return "<code>" + esc(String(s)) + "</code>"; }
+  function chkVal(v) { var s; try { s = JSON.stringify(v); } catch (e) { s = String(v); } if (s === undefined) s = String(v); if (s.length > 70) s = s.slice(0, 67) + "…"; return chkC(s); }
+  function chkIsPh(v) { v = String(v == null ? "" : v).trim(); return /^<[^>]*>$/.test(v) || /^\{\{[^}]*\}\}$/.test(v) || /^\$\{?\w+\}?$/.test(v) || /^(Bearer\s+)?(<[^>]*>|\{\{[^}]*\}\}|\.\.\.|…|xxx+|token)$/i.test(v); }
+  function chkDist(a, b) {
+    if (a === b) return 0;
+    var m = a.length, n = b.length, prev = [], cur, i, j;
+    for (j = 0; j <= n; j++) prev[j] = j;
+    for (i = 1; i <= m; i++) {
+      cur = [i];
+      for (j = 1; j <= n; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a.charAt(i - 1) === b.charAt(j - 1) ? 0 : 1));
+      prev = cur;
+    }
+    return prev[n];
+  }
+  function chkNear(name, list) {
+    var norm = function (s) { return String(s).toLowerCase().replace(/[_\-\s]/g, ""); };
+    var a = norm(name), best = null, bd = 99;
+    list.forEach(function (k) {
+      var b = norm(k);
+      if (a === b) { best = k; bd = 0; return; }
+      var d = chkDist(a, b);
+      if (d < bd && d <= (Math.max(a.length, b.length) >= 6 ? 2 : 1) && a.length >= 3) { bd = d; best = k; }
+    });
+    return best;
+  }
+
+  /* --- разбор командной строки (кавычки как в bash/cmd) --- */
+  function chkTokens(s) {
+    s = String(s).replace(/\\\r?\n/g, " ").replace(/\^\r?\n/g, " ").replace(/`\r?\n/g, " ");
+    var out = [], cur = "", has = false, q = null, i = 0, c;
+    while (i < s.length) {
+      c = s.charAt(i);
+      if (q) {
+        if (c === q) q = null;
+        else if (q === '"' && c === "\\" && i + 1 < s.length && /["\\$`]/.test(s.charAt(i + 1))) cur += s.charAt(++i);
+        else cur += c;
+        i++; continue;
+      }
+      if (c === "$" && s.charAt(i + 1) === "'") { q = "'"; has = true; i += 2; continue; }
+      if (c === "'" || c === '"') { q = c; has = true; i++; continue; }
+      if (c === "\\" && i + 1 < s.length) { cur += s.charAt(++i); has = true; i++; continue; }
+      if (/\s/.test(c)) { if (has) { out.push(cur); cur = ""; has = false; } i++; continue; }
+      cur += c; has = true; i++;
+    }
+    if (has) out.push(cur);
+    return out;
+  }
+
+  function chkUrl(u) {
+    var r = { raw: u || "", scheme: "", host: "", path: "", query: [] };
+    u = String(u || "").trim();
+    if (!u) return r;
+    var m = u.match(/^(?:([a-z][a-z0-9+.-]*):\/\/)?([^\/?#]*)([^?#]*)(?:\?([^#]*))?/i) || [];
+    r.scheme = (m[1] || "").toLowerCase();
+    if (!r.scheme && u.charAt(0) === "/") { r.host = ""; r.path = (m[2] || "") + (m[3] || ""); }
+    else { r.host = (m[2] || ""); r.path = m[3] || ""; }
+    if (!r.scheme && r.host && !/[.:]|\{\{|<|localhost/i.test(r.host)) { r.path = "/" + r.host + r.path; r.host = ""; }
+    r.host = r.host.replace(/^[^@]*@/, "");
+    (m[4] || "").split("&").forEach(function (kv) {
+      if (!kv) return;
+      var i = kv.indexOf("="), k = i < 0 ? kv : kv.slice(0, i), v = i < 0 ? "" : kv.slice(i + 1);
+      try { k = decodeURIComponent(k.replace(/\+/g, " ")); v = decodeURIComponent(v.replace(/\+/g, " ")); } catch (e) {}
+      r.query.push([k, v]);
+    });
+    return r;
+  }
+
+  /* один текст «запрос + Ответ: …» → две части */
+  function chkSplit(text) {
+    var t = String(text || "");
+    var m = /^[ \t]*(?:ответ|тело ответа|response body|response|resp)[ \t]*(?::[ \t]*(.*))?[ \t]*$/im.exec(t);
+    if (!m) return { req: t, resp: "" };
+    return { req: t.slice(0, m.index), resp: ((m[1] || "") + "\n" + t.slice(m.index + m[0].length)).trim() };
+  }
+
+  function chkParse(text) {
+    var req = { method: "", url: "", headers: [], body: null, kind: "", notes: [], ctImplied: false };
+    var t = String(text || "").replace(/\u00a0/g, " ").replace(/[\u200b\ufeff]/g, "").trim();
+    if (!t) return req;
+    function addHeader(line) {
+      var i = line.indexOf(":");
+      if (i < 0) { i = line.indexOf(";"); if (i < 0) return; }
+      req.headers.push({ name: line.slice(0, i).trim(), value: line.slice(i + 1).trim() });
+    }
+    if (/^\s*curl(\.exe)?(\s|$)/i.test(t)) {
+      req.kind = "curl";
+      var tk = chkTokens(t), i = 1, a, parts = [];
+      var DATA_FLAGS = { "-d": 1, "--data": 1, "--data-raw": 1, "--data-binary": 1, "--data-ascii": 1, "--data-urlencode": 1, "--json": 1 };
+      var ARG_FLAGS = { "-o": 1, "--output": 1, "-e": 1, "--referer": 1, "-m": 1, "--max-time": 1, "--connect-timeout": 1, "-x": 1, "--proxy": 1,
+        "--retry": 1, "-w": 1, "--write-out": 1, "--cert": 1, "--key": 1, "--cacert": 1, "-F": 1, "--form": 1, "-T": 1, "--resolve": 1, "--http-version": 1 };
+      while (i < tk.length) {
+        a = tk[i];
+        if (a === "-X" || a === "--request") req.method = String(tk[++i] || "").toUpperCase();
+        else if (/^-X.+/.test(a)) req.method = a.slice(2).toUpperCase();
+        else if (/^--request=/.test(a)) req.method = a.slice(10).toUpperCase();
+        else if (a === "-H" || a === "--header") addHeader(String(tk[++i] || ""));
+        else if (/^-H.+/.test(a)) addHeader(a.slice(2));
+        else if (/^--header=/.test(a)) addHeader(a.slice(9));
+        else if (DATA_FLAGS[a]) { parts.push(String(tk[++i] || "")); if (a === "--json") req.ctImplied = true; }
+        else if (/^--(data|data-raw|data-binary|data-ascii|json)=/.test(a)) { parts.push(a.slice(a.indexOf("=") + 1)); if (/^--json=/.test(a)) req.ctImplied = true; }
+        else if (/^-d.+/.test(a)) parts.push(a.slice(2));
+        else if (a === "--url") req.url = String(tk[++i] || "");
+        else if (a === "-u" || a === "--user") { i++; req.notes.push("В команде есть basic-авторизация (-u) — в портале она не описана."); }
+        else if (a === "-A" || a === "--user-agent") req.headers.push({ name: "User-Agent", value: String(tk[++i] || "") });
+        else if (a === "-b" || a === "--cookie") req.headers.push({ name: "Cookie", value: String(tk[++i] || "") });
+        else if (a === "-G" || a === "--get") { req.method = req.method || "GET"; req.notes.push("Флаг -G: данные из -d уходят в строку запроса, а не в тело."); }
+        else if (a === "-I" || a === "--head") req.method = req.method || "HEAD";
+        else if (ARG_FLAGS[a]) i++;
+        else if (/^-/.test(a)) { /* флаг без аргумента: --location, -s, -k, --compressed … */ }
+        else if (!req.url) req.url = a;
+        i++;
+      }
+      if (parts.length) req.body = parts.join("&");
+      if (req.body && /^@/.test(req.body)) { req.notes.push("Тело берётся из файла (" + req.body + ") — вставьте его содержимое, чтобы проверить поля."); req.body = null; req.bodyFromFile = true; }
+      if (!req.method) req.method = req.body != null || req.bodyFromFile ? "POST" : "GET";
+      return req;
+    }
+    /* «METHOD URL», строки «Заголовок: значение», затем JSON */
+    req.kind = "http";
+    /* тело — первая «{» или «[» в начале строки (но не {{переменная}} Postman) либо сразу после URL */
+    var bm = /(?:^|\n)[ \t]*(?=(?!\{\{)[{\[])/.exec(t), bi = -1, head = t, bodyText = "";
+    if (bm) bi = bm.index + bm[0].length;
+    else { var im = /[ \t](?=(?!\{\{)[{\[]\s*["{\[\]}0-9tfn-])/.exec(t); if (im) bi = im.index + 1; }
+    if (bi >= 0) { head = t.slice(0, bi); bodyText = t.slice(bi).trim(); }
+    if (!head.trim() && bodyText) req.kind = "json";
+    head.split(/\r?\n/).forEach(function (ln) {
+      var s = ln.trim().replace(/^[>$#*\-\s]+/, "");
+      if (!s) return;
+      var mm = s.match(/^(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\b[\s:]*(\S+)?/i);
+      if (mm && (!mm[2] || /^(https?:\/\/|\/|\{\{|[\w.-]+\.[a-z]{2,}\/)/i.test(mm[2]))) {
+        if (!req.method) req.method = mm[1].toUpperCase();
+        if (mm[2] && !req.url) req.url = mm[2].replace(/[,;'"]+$/, "");
+        return;
+      }
+      var hm = s.match(/^([A-Za-z][A-Za-z0-9_-]*)\s*:\s*(.*)$/);
+      if (hm && !/^https?$/i.test(hm[1])) {
+        var hn = hm[1].toLowerCase(), hv = hm[2].trim().replace(/^['"]|['"]$/g, "");
+        if (/^(url|uri|endpoint|request url)$/.test(hn)) { if (!req.url) req.url = hv; return; }
+        if (/^(method|request method)$/.test(hn)) { if (!req.method) req.method = hv.toUpperCase(); return; }
+        if (/^(body|request|headers|payload|data)$/.test(hn) && !hv) return;
+        req.headers.push({ name: hm[1], value: hv });
+        return;
+      }
+      var u = s.match(/https?:\/\/[^\s'"<>]+|\{\{[^}]+\}\}\/[^\s'"]+/i);
+      if (u && !req.url) { req.url = u[0]; return; }
+      if (!req.url && /^\/[\w\-./<>{}%?=&:]+$/.test(s)) req.url = s;
+    });
+    if (bodyText) req.body = bodyText;
+    return req;
+  }
+
+  /* --- JSON с понятной диагностикой --- */
+  function chkJson(text) {
+    var r = { ok: false, value: undefined, error: "", where: "", hints: [], fixed: false };
+    try { r.value = JSON.parse(text); r.ok = true; return r; } catch (e) { r.error = String(e && e.message || e); }
+    var pm = r.error.match(/position (\d+)/), lm = r.error.match(/line (\d+) column (\d+)/);
+    if (pm) { var before = text.slice(0, +pm[1]).split("\n"); r.where = "строка " + before.length + ", позиция " + (before[before.length - 1].length + 1); }
+    else if (lm) r.where = "строка " + lm[1] + ", позиция " + lm[2];
+    if (/,\s*[}\]]/.test(text)) r.hints.push("лишняя запятая перед <code>}</code> или <code>]</code>");
+    if (/[“”„«»‘’]/.test(text)) r.hints.push("«типографские» кавычки вместо обычных <code>\"</code>");
+    if (/'[^'\n]*'\s*:/.test(text) || /:\s*'[^'\n]*'/.test(text)) r.hints.push("одинарные кавычки — в JSON допустимы только двойные");
+    if (/[{,]\s*[A-Za-z_][\w]*\s*:/.test(text)) r.hints.push("имя поля без кавычек");
+    if (/(^|[^:"])\/\/[^\n]*$/m.test(text) || /\/\*/.test(text)) r.hints.push("комментарии — в JSON их быть не должно");
+    if (/:\s*(None|True|False|undefined|NaN)\b/.test(text)) r.hints.push("значения <code>None</code>/<code>True</code>/<code>False</code>/<code>undefined</code> — в JSON это <code>null</code>/<code>true</code>/<code>false</code>");
+    if (/"\s*\n\s*"/.test(text) && !/,\s*\n\s*"/.test(text)) r.hints.push("пропущена запятая между полями");
+    var open = (text.match(/[{\[]/g) || []).length, close = (text.match(/[}\]]/g) || []).length;
+    if (open !== close) r.hints.push("не сходится число открывающих и закрывающих скобок (" + open + " и " + close + ")");
+    var t2 = text.replace(/[“”„«»]/g, '"').replace(/,(\s*[}\]])/g, "$1").replace(/:\s*None\b/g, ": null").replace(/:\s*True\b/g, ": true").replace(/:\s*False\b/g, ": false");
+    try { r.value = JSON.parse(t2); r.fixed = true; } catch (e2) {}
+    return r;
+  }
+
+  /* --- сверка значения со схемой --- */
+  function chkType(v) { return v === null ? "null" : Array.isArray(v) ? "array" : typeof v === "number" ? (Math.floor(v) === v ? "integer" : "number") : typeof v; }
+  function chkField(p) { return p ? chkC(p) : "тело"; }
+  function chkDesc(s) {
+    var d = String(s && s.description || "").replace(/[`*]/g, "").replace(/\s+/g, " ").trim();
+    if (!d) return "";
+    var cut = d.split(/(?<=[.!?])\s/)[0];
+    if (cut.length > 130) cut = cut.slice(0, 127) + "…";
+    return " — " + esc(cut);
+  }
+  function chkDeref(schemas, sch, depth) {
+    var n = 0;
+    while (sch && sch.$ref && n++ < 10) sch = schemas[sch.$ref.split("/").pop()];
+    return sch || null;
+  }
+  function chkValidate(schemas, sch, v, path, out, o, depth) {
+    depth = depth || 0;
+    sch = chkDeref(schemas, sch);
+    if (!sch || depth > 16) return;
+    var soft = !!o.resp, i;
+    if (sch.allOf) sch.allOf.forEach(function (s) { chkValidate(schemas, s, v, path, out, o, depth + 1); });
+    var alts = sch.oneOf || sch.anyOf;
+    if (alts) {
+      var best = null;
+      for (i = 0; i < alts.length; i++) {
+        var tmp = [], cnt0 = o.count;
+        chkValidate(schemas, alts[i], v, path, tmp, o, depth + 1);
+        var ne = tmp.filter(function (x) { return x.l === "err" || (soft && x.l === "warn"); }).length;
+        if (!ne) { tmp.forEach(function (x) { out.push(x); }); return; }
+        o.count = cnt0;
+        if (!best || ne < best.n) best = { n: ne, items: tmp, idx: i };
+      }
+      out.push({ l: soft ? "warn" : "err", t: chkField(path) + ": не подходит ни под один из " + alts.length + " вариантов схемы; ближе всего вариант " + (best.idx + 1) + ":" });
+      best.items.forEach(function (x) { out.push(x); });
+      return;
+    }
+    var ty = sch.type || (sch.properties ? "object" : sch.items ? "array" : null), at = chkType(v);
+    if (v === null) {
+      if (!sch.nullable) out.push({ l: soft ? "info" : "warn", t: chkField(path) + " = <code>null</code>" + (ty ? ", в портале описан тип <b>" + ty + "</b>" : "") });
+      return;
+    }
+    if (ty && !(ty === at || (ty === "number" && at === "integer"))) {
+      var hint = "";
+      if ((ty === "number" || ty === "integer") && at === "string" && v.trim() !== "" && !isNaN(+v)) hint = " — число передано строкой, уберите кавычки";
+      else if (ty === "string" && (at === "integer" || at === "number" || at === "boolean")) hint = " — значение нужно взять в кавычки";
+      else if (ty === "boolean" && at === "string" && /^(true|false)$/i.test(v)) hint = " — уберите кавычки";
+      else if (ty === "integer" && at === "number") hint = " — нужно целое число";
+      else if (ty === "array" && at === "object") hint = " — нужен массив <code>[ … ]</code>";
+      else if (ty === "object" && at === "array") hint = " — нужен объект <code>{ … }</code>, а не массив";
+      out.push({ l: soft ? "warn" : "err", t: chkField(path) + ": ожидается <b>" + ty + "</b>, передано <b>" + at + "</b> " + chkVal(v) + hint });
+      return;
+    }
+    if (sch.enum && sch.enum.length && sch.enum.indexOf(v) < 0) {
+      var ci = at === "string" ? sch.enum.filter(function (e) { return String(e).toLowerCase() === v.toLowerCase(); })[0] : null;
+      out.push({ l: soft ? "warn" : "err", t: chkField(path) + ": значение " + chkVal(v) + " не входит в допустимые: " + sch.enum.map(function (e) { return chkC(e); }).join(", ") +
+        (ci ? " — регистр важен, нужно " + chkC(ci) : "") });
+    }
+    if (at === "string") {
+      if (!chkIsPh(v)) {
+        if (sch.minLength != null && v.length < sch.minLength) out.push({ l: soft ? "warn" : "err", t: chkField(path) + ": длина " + v.length + ", минимум " + sch.minLength });
+        if (sch.maxLength != null && v.length > sch.maxLength) out.push({ l: soft ? "warn" : "err", t: chkField(path) + ": длина " + v.length + ", максимум " + sch.maxLength });
+        if (sch.pattern) { try { if (!new RegExp(sch.pattern).test(v)) out.push({ l: soft ? "warn" : "err", t: chkField(path) + ": значение " + chkVal(v) + " не соответствует шаблону " + chkC(sch.pattern) }); } catch (e) {} }
+        if (sch.format === "uuid" && !CHK_UUID.test(v)) out.push({ l: "warn", t: chkField(path) + ": ожидается UUID, передано " + chkVal(v) });
+        if (sch.format === "date-time" && (isNaN(Date.parse(v)) || !/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(v))) out.push({ l: "warn", t: chkField(path) + ": ожидается дата-время в формате ISO 8601 (например, <code>2026-11-10T18:40:00.000Z</code>), передано " + chkVal(v) });
+      }
+    } else if (at === "integer" || at === "number") {
+      if (sch.minimum != null && v < sch.minimum) out.push({ l: soft ? "warn" : "err", t: chkField(path) + ": " + v + " меньше минимума " + sch.minimum });
+      if (sch.maximum != null && v > sch.maximum) out.push({ l: soft ? "warn" : "err", t: chkField(path) + ": " + v + " больше максимума " + sch.maximum });
+    } else if (at === "object") {
+      var props = sch.properties || {}, names = Object.keys(props), req = sch.required || [];
+      req.forEach(function (k) {
+        var p = path ? path + "." + k : k, ps = chkDeref(schemas, props[k]) || {};
+        if (!Object.prototype.hasOwnProperty.call(v, k)) {
+          out.push({ l: soft ? "warn" : "err", t: "нет обязательного поля " + chkC(p) + (ps.type ? " (" + ps.type + ")" : "") + chkDesc(ps) });
+        } else if (v[k] === "" && !soft) out.push({ l: "warn", t: chkC(p) + ": обязательное поле передано пустой строкой" });
+      });
+      Object.keys(v).forEach(function (k) {
+        var p = path ? path + "." + k : k;
+        o.count++;
+        if (props[k]) chkValidate(schemas, props[k], v[k], p, out, o, depth + 1);
+        else if (sch.additionalProperties && typeof sch.additionalProperties === "object") chkValidate(schemas, sch.additionalProperties, v[k], p, out, o, depth + 1);
+        else if (names.length && sch.additionalProperties !== true) {
+          var near = chkNear(k, names.filter(function (n) { return !Object.prototype.hasOwnProperty.call(v, n); }));
+          out.push({ l: soft ? "info" : "warn", t: "поле " + chkC(p) + " не описано в портале" + (near ? " — возможно, имелось в виду " + chkC(near) : (soft ? "" : " (лишнее или опечатка)")) });
+        }
+      });
+    } else if (at === "array" && sch.items) {
+      for (i = 0; i < v.length && i < 50; i++) chkValidate(schemas, sch.items, v[i], (path || "") + "[" + i + "]", out, o, depth + 1);
+    }
+  }
+
+  /* --- поиск эндпоинта по методу и пути --- */
+  function chkNormPath(p) { return String(p || "").replace(/\/{2,}/g, "/").replace(/\/+$/, "").toLowerCase(); }
+  function chkAllOps() {
+    var all = [];
+    DATA.apis.forEach(function (api, ai) {
+      Object.keys(api.operations).forEach(function (uid) { all.push({ api: api, op: api.operations[uid], ai: ai }); });
+    });
+    return all;
+  }
+  function chkFind(method, url) {
+    var res = { cands: [], how: "", suggest: [] };
+    var p = chkNormPath(url.path);
+    if (!p) return res;
+    var all = chkAllOps().filter(function (x) { return !/[<{]/.test(x.op.path); });
+    var hit = all.filter(function (x) { return chkNormPath(x.op.path) === p; });
+    if (hit.length) res.how = "exact";
+    else {
+      hit = all.filter(function (x) { var op = chkNormPath(x.op.path); return op.length > 4 && p.slice(-op.length) === op && p.charAt(p.length - op.length - 1) !== ""; });
+      if (hit.length) { var mx = Math.max.apply(null, hit.map(function (x) { return x.op.path.length; })); hit = hit.filter(function (x) { return x.op.path.length === mx; }); res.how = "suffix"; }
+    }
+    if (!hit.length) {
+      var seen = {};
+      all.map(function (x) { return { x: x, d: chkDist(p, chkNormPath(x.op.path)) }; })
+        .filter(function (y) { return y.d <= Math.max(3, Math.round(p.length * 0.3)); })
+        .sort(function (a, b) { return a.d - b.d || a.x.ai - b.x.ai; })
+        .forEach(function (y) { var k = y.x.op.method + " " + y.x.op.path; if (!seen[k] && res.suggest.length < 3) { seen[k] = 1; res.suggest.push(y.x); } });
+      return res;
+    }
+    var fam = (CHK_HOSTS[String(url.host).toLowerCase()] || {}).fam || null;
+    var byMethod = method ? hit.filter(function (x) { return x.op.method === method; }) : hit;
+    res.methodMismatch = !!(method && !byMethod.length);
+    var pool = byMethod.length ? byMethod : hit;
+    pool.sort(function (a, b) {
+      var fa = fam && CHK_FAM[a.api.key] === fam ? 0 : 1, fb = fam && CHK_FAM[b.api.key] === fam ? 0 : 1;
+      return fa - fb || a.ai - b.ai;
+    });
+    res.cands = pool;
+    return res;
+  }
+
+  function chkJwt(tok) {
+    var p = String(tok).split(".");
+    if (p.length !== 3) return null;
+    try {
+      var s = p[1].replace(/-/g, "+").replace(/_/g, "/");
+      while (s.length % 4) s += "=";
+      return JSON.parse(decodeURIComponent(escape(atob(s))));
+    } catch (e) { return null; }
+  }
+  function chkDate(ms) { var d = new Date(ms); return isNaN(d) ? "?" : d.toISOString().replace("T", " ").slice(0, 16) + " UTC"; }
+
+  /* правила из описаний в портале, которых нет в схемах */
+  var CHK_RULES = {
+    "/api/v1/b2b/reports/bet-history": function (body, out) {
+      if (!body || typeof body !== "object") return;
+      var b = Date.parse(body.begin_date), e = Date.parse(body.end_date);
+      if (isNaN(b) || isNaN(e)) return;
+      if (e <= b) out.push({ l: "err", t: chkC("end_date") + " должен быть позже " + chkC("begin_date") });
+      else if (e - b > 10 * 60 * 1000) out.push({ l: "err", t: "период " + chkC("begin_date") + " → " + chkC("end_date") + " = " + Math.round((e - b) / 60000) + " мин; по документации Bet History — не более 10 минут" });
+      else out.push({ l: "ok", t: "период " + Math.round((e - b) / 60000) + " мин — в пределах лимита 10 минут" });
+      if (Date.now() - b > 62 * 24 * 3600 * 1000) out.push({ l: "warn", t: "данные старше двух месяцев этим методом не отдаются — используйте BO/Superset" });
+      out.push({ l: "info", t: "суффикс <code>Z</code> игнорируется: время в запросе трактуется как <b>UTC+8</b> (см. блок «Временная зона» в описании Bet History)" });
+    }
+  };
+
+  /* --- основная проверка --- */
+  function chkRun(inp) {
+    var res = { items: [], api: null, op: null, cands: [], req: null, auto: !inp.pick, bodyVal: undefined, respVal: undefined, respText: "" };
+    function add(g, l, t) { res.items.push({ g: g, l: l, t: t }); }
+    var reqText = inp.req || "", respText = inp.resp || "";
+    if (!String(respText).trim()) { var sp = chkSplit(reqText); reqText = sp.req; respText = sp.resp; }
+    res.respText = respText;
+    var req = chkParse(reqText); res.req = req;
+    var url = chkUrl(req.url); res.url = url;
+    if (!req.kind) { add(CHK_G.url, "err", "Запрос не вставлен."); return chkDone(res); }
+    req.notes.forEach(function (n) { add(CHK_G.url, "info", esc(n)); });
+
+    /* 1. эндпоинт */
+    var found = null;
+    if (inp.pick) {
+      var pk = inp.pick.split("|"), pa = APIS[pk[0]];
+      if (pa && pa.operations[pk[1]]) { res.api = pa; res.op = pa.operations[pk[1]]; }
+    }
+    if (!res.op) {
+      res.auto = true;
+      if (!req.url) add(CHK_G.url, "err", "В запросе не найден URL. Вставьте curl или строку вида <code>POST https://…/api/v1/…</code>, либо выберите эндпоинт вручную в списке.");
+      else {
+        found = chkFind(req.method, url);
+        if (found.cands.length) { res.api = found.cands[0].api; res.op = found.cands[0].op; res.cands = found.cands; }
+        else {
+          var sg = found.suggest.map(function (x) { return '<a href="#/' + x.api.key + "/" + encodeURIComponent(x.op.uid) + '">' + esc(x.op.method + " " + x.op.path) + "</a> (" + esc(x.api.title) + ")"; });
+          add(CHK_G.url, "err", "Путь " + chkC(url.path || req.url) + " не найден ни в одном API портала." + (sg.length ? " Похожие эндпоинты: " + sg.join("; ") + "." : "") +
+            " Если это callback на стороне B2B (bet/win/refund/balance) — выберите эндпоинт вручную.");
+        }
+      }
+    }
+    var api = res.api, op = res.op;
+    if (!op) {
+      if (req.body != null) { var jb0 = chkJson(req.body); if (!jb0.ok) add(CHK_G.body, "err", "Тело запроса — невалидный JSON" + (jb0.where ? " (" + jb0.where + ")" : "") + (jb0.hints.length ? ": " + jb0.hints.join("; ") : "") + "."); else add(CHK_G.body, "ok", "Тело запроса — валидный JSON (поля не проверялись: эндпоинт не определён)."); }
+      return chkDone(res);
+    }
+    var templ = /[<{]/.test(op.path);
+    add(CHK_G.url, "ok", (res.auto ? "Эндпоинт определён по URL: " : "Эндпоинт выбран вручную: ") + "<b>" + esc(op.method + " " + op.path) + "</b> — " + esc(api.title) + (op.summary ? ", " + esc(op.summary) : ""));
+    if (found && found.how === "suffix") add(CHK_G.url, "warn", "Путь в запросе " + chkC(url.path) + " длиннее, чем в портале (" + chkC(op.path) + "): перед ним есть лишний префикс.");
+    if (res.auto && res.cands.length > 1) {
+      var others = res.cands.slice(1).map(function (x) { return esc(x.api.title); });
+      add(CHK_G.url, "info", "Такой же путь есть и в других API: " + others.join(", ") + ". Проверка идёт по «" + esc(api.title) + "»; сменить можно в списке «Эндпоинт».");
+    }
+    if (op.deprecated) add(CHK_G.url, "warn", "Эндпоинт помечен как deprecated.");
+
+    /* 2. метод, схема, хост, путь */
+    if (req.method && req.method !== op.method) add(CHK_G.url, "err", "Метод " + chkC(req.method) + " — для этого эндпоинта нужен " + chkC(op.method) + ".");
+    else if (req.method) add(CHK_G.url, "ok", "Метод " + chkC(req.method) + " верный.");
+    else add(CHK_G.url, "info", "Метод в запросе не указан; по порталу нужен " + chkC(op.method) + ".");
+    if (req.url && !templ) {
+      var host = url.host.toLowerCase(), hk = CHK_HOSTS[host], fam = CHK_FAM[api.key];
+      if (url.scheme === "http") add(CHK_G.url, "warn", "Запрос идёт по <code>http://</code> — API работает по <code>https://</code>.");
+      if (!host) add(CHK_G.url, "info", "Хост в запросе не указан — проверен только путь.");
+      else if (/\{\{|<|\$/.test(host)) add(CHK_G.url, "info", "Хост задан переменной " + chkC(url.host) + " — не проверялся.");
+      else if (!fam) add(CHK_G.url, "info", "Хост " + chkC(url.host) + ": для «" + esc(api.title) + "» адрес выдаёт провайдер, в портале он не зафиксирован.");
+      else if (hk && hk.fam === fam) add(CHK_G.url, hk.prod ? "warn" : "ok", "Хост " + chkC(url.host) + " — среда <b>" + esc(hk.env) + "</b>." + (hk.prod ? " Это боевая среда: убедитесь, что запрос должен идти именно туда." : ""));
+      else if (hk) add(CHK_G.url, "warn", "Хост " + chkC(url.host) + " (" + esc(hk.env) + ") не относится к «" + esc(api.title) + "». По порталу: " + esc(CHK_FAM_HOSTS[fam]) + ".");
+      else add(CHK_G.url, "warn", "Хост " + chkC(url.host) + " не значится в портале для «" + esc(api.title) + "». Известные адреса: " + esc(CHK_FAM_HOSTS[fam]) + ".");
+      if (/\/\/+/.test(url.path)) add(CHK_G.url, "warn", "В пути есть двойной слэш: " + chkC(url.path) + ".");
+      if (/\/$/.test(url.path) && url.path.length > 1) add(CHK_G.url, "warn", "Путь заканчивается на <code>/</code> — в портале без завершающего слэша.");
+      if (/\s/.test(req.url)) add(CHK_G.url, "err", "В URL есть пробелы.");
+      if (!found || found.how === "exact") {
+        var rp = url.path.replace(/\/{2,}/g, "/").replace(/\/+$/, "");
+        if (rp !== op.path && rp.toLowerCase() === op.path.toLowerCase()) add(CHK_G.url, "warn", "Регистр букв в пути отличается от портала: " + chkC(url.path) + " вместо " + chkC(op.path) + ".");
+      }
+      if (!res.auto) {
+        var np = chkNormPath(url.path), no = chkNormPath(op.path);
+        if (np && np !== no && np.slice(-no.length) !== no) add(CHK_G.url, "err", "Путь в URL " + chkC(url.path) + " не совпадает с выбранным эндпоинтом " + chkC(op.path) + ".");
+      }
+    } else if (templ) add(CHK_G.url, "info", "Это callback: адрес задаёт B2B-компания в настройках агрегатора, поэтому хост и путь не проверяются.");
+
+    /* 3. параметры строки запроса */
+    var qdefs = (op.params || []).filter(function (p) { return p.in === "query"; });
+    if (qdefs.length || url.query.length) {
+      var qmap = {}; url.query.forEach(function (kv) { qmap[kv[0]] = kv[1]; });
+      qdefs.forEach(function (p) {
+        if (!Object.prototype.hasOwnProperty.call(qmap, p.name)) { if (p.required) add(CHK_G.query, "err", "нет обязательного параметра " + chkC(p.name) + chkDesc(p)); return; }
+        var v = qmap[p.name];
+        if (p.enum && p.enum.length && p.enum.indexOf(v) < 0 && !chkIsPh(v)) add(CHK_G.query, "err", chkC(p.name) + ": значение " + chkVal(v) + " не входит в допустимые: " + p.enum.map(chkC).join(", "));
+        else if ((p.type === "integer" || p.type === "number") && v !== "" && isNaN(+v) && !chkIsPh(v)) add(CHK_G.query, "err", chkC(p.name) + ": ожидается число, передано " + chkVal(v));
+        else add(CHK_G.query, "ok", chkC(p.name) + " передан.");
+      });
+      url.query.forEach(function (kv) {
+        if (qdefs.some(function (p) { return p.name === kv[0]; })) return;
+        var near = chkNear(kv[0], qdefs.map(function (p) { return p.name; }));
+        add(CHK_G.query, "warn", "параметр " + chkC(kv[0]) + " не описан в портале для этого эндпоинта" + (near ? " — возможно, имелся в виду " + chkC(near) : "") + ".");
+      });
+    }
+
+    /* 4. заголовки */
+    var hdefs = (op.params || []).filter(function (p) { return p.in === "header"; });
+    function hget(name) { var n = name.toLowerCase(); return req.headers.filter(function (h) { return h.name.toLowerCase() === n; }); }
+    var wantsBody = !!op.body, ctDef = hdefs.filter(function (p) { return p.name.toLowerCase() === "content-type"; })[0];
+    if (!req.headers.length && req.kind !== "curl") {
+      var need = hdefs.filter(function (p) { return p.required; }).map(function (p) { return chkC(p.name); });
+      if (wantsBody && !ctDef) need.push(chkC("Content-Type: application/json"));
+      add(CHK_G.head, "info", "Заголовки во вводе не указаны — не проверялись." + (need.length ? " Обязательные по порталу: " + need.join(", ") + "." : ""));
+    } else {
+      var seenH = {};
+      req.headers.forEach(function (h) { var n = h.name.toLowerCase(); seenH[n] = (seenH[n] || 0) + 1; });
+      Object.keys(seenH).forEach(function (n) { if (seenH[n] > 1) add(CHK_G.head, "warn", "заголовок " + chkC(n) + " указан " + seenH[n] + " раза."); });
+      hdefs.forEach(function (p) {
+        var ln = p.name.toLowerCase();
+        if (ln === "content-type" || ln === "authorization") return;
+        var got = hget(p.name);
+        if (!got.length) {
+          if (p.required) { var nearH = chkNear(p.name, req.headers.map(function (h) { return h.name; })); add(CHK_G.head, "err", "нет обязательного заголовка " + chkC(p.name) + (nearH ? " (в запросе есть похожий " + chkC(nearH) + " — проверьте написание)" : "") + chkDesc(p)); }
+          return;
+        }
+        var v = got[0].value;
+        if (!v) add(CHK_G.head, "err", "заголовок " + chkC(p.name) + " пустой.");
+        else if (chkIsPh(v)) add(CHK_G.head, "info", chkC(p.name) + ": указан плейсхолдер " + chkC(v) + " — подставьте реальное значение.");
+        else if ((ln === "b2b-client-id" || ln === "request-id" || /uuid/i.test(p.description || "")) && !CHK_UUID.test(v)) add(CHK_G.head, "warn", chkC(p.name) + ": ожидается UUID, передано " + chkVal(v) + ".");
+        else add(CHK_G.head, "ok", chkC(p.name) + " передан.");
+      });
+      /* Authorization: содержимое токена наружу не выводится */
+      var authDef = hdefs.filter(function (p) { return p.name.toLowerCase() === "authorization"; })[0], auth = hget("authorization");
+      if (authDef || auth.length) {
+        if (!auth.length) { if (authDef && authDef.required) add(CHK_G.head, "err", "нет обязательного заголовка " + chkC("Authorization") + " — нужен <code>Bearer &lt;token&gt;</code>."); }
+        else {
+          var av = auth[0].value;
+          if (!av) add(CHK_G.head, "err", chkC("Authorization") + " пустой.");
+          else if (chkIsPh(av)) add(CHK_G.head, "info", chkC("Authorization") + ": указан плейсхолдер — токен не проверялся.");
+          else if (!/^bearer\s+\S+/i.test(av)) add(CHK_G.head, "err", chkC("Authorization") + " должен иметь вид <code>Bearer &lt;token&gt;</code> — нет префикса <code>Bearer</code>.");
+          else {
+            if (!/^Bearer /.test(av)) add(CHK_G.head, "warn", chkC("Authorization") + ": префикс лучше писать как <code>Bearer</code> + один пробел.");
+            var jw = chkJwt(av.replace(/^bearer\s+/i, "").trim());
+            if (!jw) add(CHK_G.head, "warn", chkC("Authorization") + ": токен не похож на JWT (три части через точку) — проверьте, что вставлен целиком.");
+            else {
+              if (jw.exp && jw.exp * 1000 < Date.now()) add(CHK_G.head, "err", chkC("Authorization") + ": срок действия токена истёк " + chkDate(jw.exp * 1000) + " — сгенерируйте новый (<code>POST /api/v1/b2b/token</code>).");
+              else if (jw.exp) add(CHK_G.head, "ok", chkC("Authorization") + ": Bearer-токен, действует до " + chkDate(jw.exp * 1000) + ".");
+              else add(CHK_G.head, "ok", chkC("Authorization") + ": Bearer-токен в формате JWT.");
+              var cid = hget("b2b-client-id")[0];
+              if (jw.b2b_id && cid && cid.value && !chkIsPh(cid.value)) {
+                if (String(jw.b2b_id).toLowerCase() !== cid.value.toLowerCase()) add(CHK_G.head, "err", "токен выпущен для другой B2B-компании: <code>b2b_id</code> внутри токена не совпадает с заголовком " + chkC("b2b-client-id") + ".");
+                else add(CHK_G.head, "ok", "<code>b2b_id</code> внутри токена совпадает с " + chkC("b2b-client-id") + ".");
+              }
+            }
+          }
+        }
+      }
+      /* Content-Type */
+      var ct = hget("content-type");
+      if (wantsBody || (ctDef && ctDef.required)) {
+        if (ct.length) {
+          if (/application\/json/i.test(ct[0].value)) add(CHK_G.head, "ok", chkC("Content-Type: application/json") + " указан.");
+          else add(CHK_G.head, "err", chkC("Content-Type") + " = " + chkVal(ct[0].value) + " — нужен <code>application/json</code>.");
+        } else if (req.ctImplied) add(CHK_G.head, "ok", "Content-Type задан флагом <code>--json</code>.");
+        else if (req.kind === "curl" && req.body != null) add(CHK_G.head, "err", "нет заголовка " + chkC("Content-Type: application/json") + " — curl с <code>-d</code> без него отправит <code>application/x-www-form-urlencoded</code>, и тело не разберётся.");
+        else add(CHK_G.head, "warn", "не указан " + chkC("Content-Type: application/json") + ".");
+      }
+    }
+
+    /* 5. тело запроса */
+    var bodySchema = op.body && op.body.schema;
+    if (req.body == null || !String(req.body).trim()) {
+      if (req.bodyFromFile) { /* уже сообщили */ }
+      else if (op.body && op.body.required) add(CHK_G.body, "err", "Тела запроса нет, а для этого эндпоинта оно обязательно.");
+      else if (op.body) add(CHK_G.body, "info", "Тело запроса не передано (по порталу оно необязательно).");
+    } else {
+      if (!op.body) add(CHK_G.body, "warn", "У этого эндпоинта тела запроса нет, а в запросе оно передано.");
+      var jb = chkJson(req.body);
+      if (!jb.ok) {
+        add(CHK_G.body, "err", "Тело — невалидный JSON" + (jb.where ? " (" + jb.where + ")" : "") + (jb.hints.length ? ": " + jb.hints.join("; ") : "") + "." +
+          (jb.fixed ? " Дальше поля проверены по автоматически исправленному варианту." : " Поля не проверялись."));
+      }
+      if (jb.ok || jb.fixed) {
+        res.bodyVal = jb.value;
+        if (jb.ok) add(CHK_G.body, "ok", "Тело — валидный JSON.");
+        if (bodySchema) {
+          var bout = [], bo = { count: 0 };
+          chkValidate(api.schemas, bodySchema, jb.value, "", bout, bo);
+          bout.forEach(function (x) { add(CHK_G.body, x.l, x.t); });
+          if (!bout.some(function (x) { return x.l === "err"; })) add(CHK_G.body, "ok", "Обязательные поля на месте, типы совпадают (проверено полей: " + bo.count + ").");
+        }
+        var rule = CHK_RULES[op.path];
+        if (rule) { var rout = []; rule(jb.value, rout); rout.forEach(function (x) { add(CHK_G.body, x.l, x.t); }); }
+      }
+    }
+
+    /* 6. ответ */
+    if (String(respText).trim()) {
+      var jr = chkJson(String(respText).trim());
+      if (!jr.ok && !jr.fixed) add(CHK_G.resp, "warn", "Ответ не является JSON" + (/^\s*</.test(respText) ? " (похоже на HTML-страницу — обычно это ответ прокси/шлюза, а не API)" : "") + " — структура не проверялась.");
+      else {
+        res.respVal = jr.value;
+        var rv = jr.value, list = (Array.isArray(op.responses) ? op.responses : []).filter(function (r) { return r && r.schema; });
+        var code = String(inp.code || "").trim(), chosen = null, ranked = [];
+        list.forEach(function (r) {
+          var tmp = [], o2 = { count: 0, resp: true };
+          chkValidate(api.schemas, r.schema, rv, "", tmp, o2);
+          var bad = tmp.filter(function (x) { return x.l === "warn" || x.l === "err"; }).length;
+          var unk = tmp.filter(function (x) { return x.l === "info"; }).length;
+          var rec = { r: r, items: tmp, bad: bad, score: bad * 1000 + unk, ok2: /^2/.test(String(r.code)) };
+          if (code && String(r.code) === code) chosen = rec;
+          ranked.push(rec);
+        });
+        ranked.sort(function (x, y) { return x.score - y.score || (y.ok2 ? 1 : 0) - (x.ok2 ? 1 : 0); });
+        if (code && !chosen && list.length) add(CHK_G.resp, "info", "Код " + chkC(code) + " в портале для этого эндпоинта не описан; описаны: " + list.map(function (r) { return chkC(r.code); }).join(", ") + ".");
+        var use = chosen || ranked[0];
+        if (use) {
+          var rd = use.r.description ? " — " + esc(use.r.description) : "";
+          if (!use.bad && use.ok2) add(CHK_G.resp, "ok", "Ответ соответствует схеме успешного ответа " + chkC(use.r.code) + ".");
+          else if (!use.bad) {
+            var same = chosen ? [use] : ranked.filter(function (x) { return x.score === use.score && !x.ok2; });
+            add(CHK_G.resp, "err", "Ответ имеет структуру ответа-ошибки. В портале так выглядят: " + same.map(function (x) { return chkC(x.r.code) + (x.r.description ? " (" + esc(x.r.description) + ")" : ""); }).join(", ") + ".");
+          } else add(CHK_G.resp, "warn", "Ответ не полностью совпадает со схемой ответа " + chkC(use.r.code) + rd + ":");
+          use.items.forEach(function (x) { add(CHK_G.resp, x.l, x.t); });
+        } else add(CHK_G.resp, "info", "Схема ответа для этого эндпоинта в портале не описана.");
+        if (rv && typeof rv === "object" && !Array.isArray(rv)) {
+          var errStr = typeof rv.error === "string" && rv.error ? rv.error : (typeof rv.Error === "string" && rv.Error ? rv.Error : "");
+          if (errStr) add(CHK_G.resp, "err", "API вернул ошибку: " + chkVal(errStr) + '. <a href="#/search/' + encodeURIComponent(errStr.slice(0, 60)) + '">Искать по порталу →</a>');
+          if (rv.error_code != null && rv.error_code !== 0 && rv.error_code !== "0") add(CHK_G.resp, "err", chkC("error_code") + " = " + chkVal(rv.error_code) + (CHK_ERR_CODES[rv.error_code] ? ": " + esc(CHK_ERR_CODES[rv.error_code]) : "") + (rv.error_message ? " (" + chkC("error_message") + ": " + chkVal(rv.error_message) + ")" : "") + ".");
+          else if (rv.error_code === 0 || rv.error_code === "0") add(CHK_G.resp, "ok", chkC("error_code") + " = 0 — успешная обработка.");
+        }
+      }
+    }
+    return chkDone(res);
+  }
+  function chkDone(res) {
+    var c = { err: 0, warn: 0, ok: 0, info: 0 };
+    res.items.forEach(function (x) { c[x.l] = (c[x.l] || 0) + 1; });
+    res.sum = c;
+    return res;
+  }
+
+  /* --- текстовые представления: отчёт, спецификация, запрос без секретов --- */
+  function chkPlain(html) { return String(html).replace(/<a [^>]*>([^<]*)<\/a>/g, "$1").replace(/<[^>]+>/g, "").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&amp;/g, "&"); }
+  function chkVerdict(res) {
+    var c = res.sum;
+    if (c.err) return "Найдено ошибок: " + c.err + (c.warn ? ", предупреждений: " + c.warn : "");
+    if (c.warn) return "Ошибок нет, предупреждений: " + c.warn;
+    return res.op ? "Замечаний нет — запрос соответствует описанию в портале" : "Запрос не разобран";
+  }
+  function chkReportText(res) {
+    var out = ["Итог: " + chkVerdict(res)], last = "", mark = { err: "[ОШИБКА]", warn: "[ВНИМАНИЕ]", ok: "[OK]", info: "[i]" };
+    if (res.op) out.push("Эндпоинт: " + res.op.method + " " + res.op.path + " (" + res.api.title + ")");
+    res.items.forEach(function (x) { if (x.g !== last) { out.push(""); out.push(x.g + ":"); last = x.g; } out.push("  " + mark[x.l] + " " + chkPlain(x.t)); });
+    return out.join("\n");
+  }
+  function chkFlat(schemas, sch, prefix, depth, out, branch) {
+    sch = chkDeref(schemas, sch);
+    if (!sch || depth > 5 || out.length > 140) return;
+    var alts = sch.oneOf || sch.anyOf;
+    if (alts) { alts.forEach(function (a, i) { out.push(prefix + "(вариант " + (i + 1) + ")"); chkFlat(schemas, a, prefix, depth + 1, out, branch); }); return; }
+    if (sch.type === "array" && sch.items) { chkFlat(schemas, sch.items, prefix + "[].", depth + 1, out, branch); return; }
+    var props = sch.properties || {}, req = sch.required || [];
+    Object.keys(props).forEach(function (k) {
+      var raw = props[k], ref = raw && raw.$ref ? raw.$ref.split("/").pop() : null, p = chkDeref(schemas, raw) || {};
+      var ty = p.type || (p.properties ? "object" : "");
+      if (ty === "array" && p.items) { var it = chkDeref(schemas, p.items) || {}; ty = "array<" + (it.type || "object") + ">"; }
+      var d = String(p.description || "").replace(/\s+/g, " ").trim(); if (d.length > 150) d = d.slice(0, 147) + "…";
+      out.push(prefix + k + " — " + ty + (req.indexOf(k) >= 0 ? ", ОБЯЗАТЕЛЬНОЕ" : ", необязательное") + (p.enum ? ", допустимые: " + p.enum.join(" | ") : "") +
+        (p.maxLength != null ? ", макс. длина " + p.maxLength : "") + (p.pattern ? ", шаблон " + p.pattern : "") + (d ? ". " + d : ""));
+      if (ref && branch.indexOf(ref) >= 0) return;
+      var nb = ref ? branch.concat([ref]) : branch;
+      if (p.properties) chkFlat(schemas, p, prefix + k + ".", depth + 1, out, nb);
+      else if (p.type === "array" && p.items) chkFlat(schemas, p.items, prefix + k + "[].", depth + 1, out, nb);
+    });
+  }
+  function chkSpecText(api, op) {
+    var L = ["API: " + api.title + (api.baseUrl ? " (" + api.baseUrl + ")" : ""), "Эндпоинт: " + op.method + " " + op.path + (op.summary ? " — " + op.summary : "")];
+    var d = String(op.description || "").trim(); if (d) L.push("Описание: " + (d.length > 2500 ? d.slice(0, 2500) + "…" : d));
+    var ps = op.params || [];
+    if (ps.length) { L.push(""); L.push("Параметры и заголовки:"); ps.forEach(function (p) { L.push("- " + p.name + " (" + p.in + (p.required ? ", ОБЯЗАТЕЛЬНЫЙ" : ", необязательный") + (p.enum ? ", допустимые: " + p.enum.join(" | ") : "") + ")" + (p.description ? ": " + String(p.description).replace(/\s+/g, " ").slice(0, 160) : "")); }); }
+    if (op.body && op.body.schema) { var b = []; chkFlat(api.schemas, op.body.schema, "", 0, b, []); L.push(""); L.push("Тело запроса (" + (op.body.required ? "обязательно" : "необязательно") + ", " + (op.body.contentType || "application/json") + "):"); b.forEach(function (x) { L.push("- " + x); }); }
+    (Array.isArray(op.responses) ? op.responses : []).forEach(function (r) {
+      if (!r.schema) return;
+      var o = []; chkFlat(api.schemas, r.schema, "", 0, o, []);
+      L.push(""); L.push("Ответ " + r.code + (r.description ? " (" + r.description + ")" : "") + ":"); o.slice(0, 60).forEach(function (x) { L.push("- " + x); });
+    });
+    var s = L.join("\n");
+    return s.length > 14000 ? s.slice(0, 14000) + "\n…(обрезано)" : s;
+  }
+  function chkScrub(s) { return String(s).replace(/eyJ[A-Za-z0-9_-]{6,}\.[A-Za-z0-9_-]{6,}\.[A-Za-z0-9_-]{6,}/g, "<jwt скрыт>").replace(/(Bearer|Basic)\s+(?!<)[A-Za-z0-9._~+\/=-]{12,}/gi, "$1 <скрыт>"); }
+  function chkMaskVal(v, key) {
+    if (Array.isArray(v)) return v.map(function (x) { return chkMaskVal(x, key); });
+    if (v && typeof v === "object") { var o = {}; Object.keys(v).forEach(function (k) { o[k] = chkMaskVal(v[k], k); }); return o; }
+    if (key && CHK_SECRET.test(key) && (typeof v === "string" || typeof v === "number") && v !== "") return "<скрыто>";
+    return v;
+  }
+  /* запрос и ответ в виде текста без токенов и паролей — только это уходит в ИИ */
+  function chkMaskText(res) {
+    var req = res.req, L = [];
+    if (req && req.kind) {
+      var u = req.url || "";
+      if (res.url && res.url.query.length) u = u.replace(/\?.*$/, "") + "?" + res.url.query.map(function (kv) { return kv[0] + "=" + (CHK_SECRET.test(kv[0]) ? "<скрыто>" : kv[1]); }).join("&");
+      L.push(((req.method || "") + " " + u).trim() || "(URL не указан)");
+      req.headers.forEach(function (h) {
+        var v = h.value;
+        if (/^authorization$/i.test(h.name)) v = /^bearer/i.test(v) ? (chkIsPh(v) ? v : "Bearer <скрыт>") : "<скрыт>";
+        else if (CHK_SECRET.test(h.name) && !chkIsPh(v)) v = "<скрыт>";
+        L.push(h.name + ": " + v);
+      });
+      if (req.body != null) {
+        L.push("");
+        var b = res.bodyVal !== undefined ? JSON.stringify(chkMaskVal(res.bodyVal), null, 2) : String(req.body).replace(/("(?:[^"\\]|\\.)*(?:pass|secret|token|api[_-]?key|signature|hash)(?:[^"\\]|\\.)*"\s*:\s*)"(?:[^"\\]|\\.)*"/gi, '$1"<скрыто>"');
+        L.push(b.length > 4200 ? b.slice(0, 4200) + "\n…(обрезано)" : b);
+      }
+    }
+    if (String(res.respText || "").trim()) {
+      L.push(""); L.push("Ответ:");
+      var r = res.respVal !== undefined ? JSON.stringify(chkMaskVal(res.respVal), null, 2) : String(res.respText);
+      L.push(r.length > 1800 ? r.slice(0, 1800) + "\n…(обрезано)" : r);
+    }
+    return chkScrub(L.join("\n"));
+  }
+
+
+  /* --- страница «Проверка запроса» --- */
+  var CHK = { req: "", resp: "", pick: "", code: "", res: null, tpl: false };
+  function chkOpsCount() { var n = 0; DATA.apis.forEach(function (a) { n += Object.keys(a.operations).length; }); return n; }
+  function chkOptions() {
+    var h = '<option value="">Определить по URL автоматически</option>';
+    DATA.apis.forEach(function (api) {
+      h += '<optgroup label="' + attr(api.title) + '">';
+      Object.keys(api.operations).forEach(function (uid) {
+        var op = api.operations[uid], v = api.key + "|" + uid;
+        h += '<option value="' + attr(v) + '"' + (CHK.pick === v ? " selected" : "") + ">" + esc(op.method + " " + op.path + (op.summary ? " — " + op.summary : "")) + "</option>";
+      });
+      h += "</optgroup>";
+    });
+    return h;
+  }
+  function chkView() {
+    var ph = "curl --location 'https://transaction.uat.agg.bet/api/v1/b2b/reports/bet-history' \\&#10;  --header 'b2b-client-id: …' \\&#10;  --header 'Content-Type: application/json' \\&#10;  --header 'Authorization: Bearer …' \\&#10;  --data '{ … }'&#10;&#10;или&#10;&#10;POST https://transaction.uat.agg.bet/api/v1/b2b/start/game&#10;Authorization: Bearer …&#10;&#10;{ … }";
+    return '<div class="crumbs">Инструменты</div><h1 class="page">Проверка запроса</h1>' +
+      '<p class="lead">Вставьте curl или запрос целиком — портал сверит его с описанием API: эндпоинт и хост, метод, обязательные заголовки и поля, типы и допустимые значения. Можно добавить и тело ответа.</p>' +
+      '<div class="note">Проверка выполняется в вашем браузере: запрос никуда не отправляется и не сохраняется. Значение токена в отчёт не попадает.</div>' +
+      '<div class="chk-form">' +
+      '<label class="chk-lbl" for="chk-req">Запрос <span>curl либо «МЕТОД URL», заголовки и JSON-тело</span></label>' +
+      '<textarea id="chk-req" class="chk-ta" rows="11" spellcheck="false" autocomplete="off" autocapitalize="off" placeholder="' + ph + '">' + esc(CHK.req) + "</textarea>" +
+      '<div class="chk-grid"><div><label class="chk-lbl" for="chk-pick">Эндпоинт <span>для callback-запросов выберите вручную</span></label><select id="chk-pick" class="chk-sel">' + chkOptions() + "</select></div>" +
+      '<div><label class="chk-lbl" for="chk-code">HTTP-код ответа <span>необязательно</span></label><input id="chk-code" class="chk-inp" inputmode="numeric" maxlength="3" placeholder="200" value="' + attr(CHK.code) + '"></div></div>' +
+      '<label class="chk-lbl" for="chk-resp">Ответ <span>необязательно — тело ответа в JSON</span></label>' +
+      '<textarea id="chk-resp" class="chk-ta" rows="5" spellcheck="false" autocomplete="off" autocapitalize="off" placeholder="{ &quot;error&quot;: &quot;…&quot; }">' + esc(CHK.resp) + "</textarea>" +
+      '<div class="chk-actions"><button id="chk-run" class="chk-btn chk-primary" type="button">Проверить</button>' +
+      '<button id="chk-clear" class="chk-btn" type="button">Очистить</button>' +
+      '<span class="chk-ex">Примеры: <button type="button" data-chk-ex="ok">корректный</button><button type="button" data-chk-ex="bad">с ошибками</button></span></div>' +
+      '</div><div id="chk-out" aria-live="polite">' + (CHK.res ? chkResultHtml(CHK.res) : "") + "</div>";
+  }
+  function chkResultHtml(res) {
+    var c = res.sum, cls = c.err ? "err" : c.warn ? "warn" : res.op ? "ok" : "err";
+    var h = '<div class="chk-sum chk-s-' + cls + '"><b>' + esc(chkVerdict(res)) + "</b>" +
+      '<span class="chk-counts">' + (c.err ? '<i class="chk-n-err">ошибок: ' + c.err + "</i>" : "") + (c.warn ? '<i class="chk-n-warn">предупреждений: ' + c.warn + "</i>" : "") +
+      (c.ok ? '<i class="chk-n-ok">в порядке: ' + c.ok + "</i>" : "") + "</span></div>";
+    if (res.op) {
+      h += '<div class="md-endpoint"><span class="m ' + res.op.method.toLowerCase() + '">' + esc(res.op.method) + '</span><code class="md-endpoint-path">' + esc(res.op.path) + "</code>" +
+        '<span class="md-endpoint-sum">' + esc(res.api.title) + (res.op.summary ? " · " + esc(res.op.summary) : "") + "</span>" +
+        '<a class="md-endpoint-link" href="#/' + res.api.key + "/" + encodeURIComponent(res.op.uid) + '">Описание эндпоинта →</a></div>';
+      if (res.auto && res.cands.length > 1) {
+        h += '<div class="chk-alts">Такой путь есть в нескольких API. Проверить как: ' + res.cands.map(function (x, i) {
+          return '<button type="button" class="chk-alt' + (i === 0 ? " is-on" : "") + '" data-chk-pick="' + attr(x.api.key + "|" + x.op.uid) + '">' + esc(x.api.title) + "</button>";
+        }).join("") + "</div>";
+      }
+    }
+    var last = null;
+    res.items.forEach(function (x) {
+      if (x.g !== last) { if (last !== null) h += "</ul>"; h += '<h3 class="chk-group">' + esc(x.g) + '</h3><ul class="chk-list">'; last = x.g; }
+      h += '<li class="chk-l-' + x.l + '"><div>' + x.t + "</div></li>";
+    });
+    if (last !== null) h += "</ul>";
+    var ai = window.PortalAgentReady && window.PortalAgentReady() && window.PortalAgentCheck;
+    h += '<div class="chk-actions">' + (ai ? '<button id="chk-ai" class="chk-btn" type="button">Объяснить через ИИ</button>' : "") +
+      '<button id="chk-copy" class="chk-btn" type="button">Скопировать отчёт</button></div>';
+    h += '<p class="chk-foot">Проверка опирается на схемы из портала. Она не знает, существует ли игрок или игра, верна ли подпись <code>hash</code> и какие особенности есть у конкретного провайдера.' +
+      (ai ? " В ИИ запрос уходит без токенов и паролей — они заменяются на <code>&lt;скрыт&gt;</code>." : "") + "</p>";
+    return h;
+  }
+  function chkSide() {
+    function li(a) { return a.map(function (t) { return "<div>" + t + "</div>"; }).join(""); }
+    return '<div class="grp"><button type="button"><span class="chev">▼</span>Что проверяется</button><div class="grp-items chk-side">' + li([
+        "Эндпоинт: есть ли такой путь и в каком API",
+        "Метод и хост: UAT или PROD, тот ли домен",
+        "Заголовки: обязательные, формат <code>Bearer</code>, срок действия токена",
+        "Тело: валидность JSON, обязательные поля, типы, допустимые значения, опечатки в именах",
+        "Ответ: соответствие схеме, расшифровка <code>error</code> и <code>error_code</code>"
+      ]) + "</div></div>" +
+      '<div class="grp"><button type="button"><span class="chev">▼</span>Что можно вставить</button><div class="grp-items chk-side">' + li([
+        "Команду <code>curl</code> — из Postman, DevTools или письма партнёра",
+        "Строку <code>POST https://…</code>, ниже заголовки <code>Имя: значение</code>, ниже JSON",
+        "Только JSON-тело — тогда выберите эндпоинт в списке",
+        "Запрос и ответ вместе: после запроса строка <code>Ответ:</code> и тело ответа"
+      ]) + "</div></div>";
+  }
+  function chkPayload(res) {
+    return { masked: chkMaskText(res), report: chkReportText(res), spec: res.op ? chkSpecText(res.api, res.op) : "", verdict: chkVerdict(res),
+      level: res.sum.err || !res.op ? "err" : res.sum.warn ? "warn" : "ok" };
+  }
+  function chkExample(kind) {
+    function iso(ms) { return new Date(ms).toISOString().replace(/\.\d+Z$/, ".000Z"); }
+    if (kind === "ok") {
+      var b = Math.floor((Date.now() - 3600000) / 600000) * 600000;
+      return "curl --location 'https://transaction.uat.agg.bet/api/v1/b2b/reports/bet-history' \\\n" +
+        "  --header 'b2b-client-id: 11111111-2222-4333-8444-555555555555' \\\n" +
+        "  --header 'Content-Type: application/json' \\\n" +
+        "  --header 'Authorization: Bearer <token>' \\\n" +
+        "  --data '{\n    \"begin_date\": \"" + iso(b) + "\",\n    \"end_date\": \"" + iso(b + 600000) + "\",\n    \"page_index\": 1,\n    \"vendor_id\": \"8f3d22d6-591f-11ed-9b6a-0242ac120002\"\n  }'";
+    }
+    return "curl -X GET 'http://transaction.uat.agg.bet/api/v1/b2b/start/game/' \\\n" +
+      "  -H 'Authorization: my-token' \\\n" +
+      "  -H 'b2b-client-id: 11111111-2222-4333-8444-555555555555' \\\n" +
+      "  -d '{\n    \"gameId\": \"e88ebb53-4578-4794-bf58-c2af86b8ca47\",\n    \"is_test\": \"true\",\n    \"b2c\": { \"id\": \"player 1\", \"country\": \"RUS\" },\n" +
+      "    \"balance\": { \"currency\": \"EUR\", \"amount\": \"10\" },\n    \"browser_session\": { \"device\": \"Desktop\", \"language\": \"en\" },\n  }'\n\nОтвет:\n{ \"error\": \"validation errors\" }";
+  }
+  function chkExec(scroll) {
+    var rq = document.getElementById("chk-req"), rs = document.getElementById("chk-resp"), pk = document.getElementById("chk-pick"), cd = document.getElementById("chk-code"), out = document.getElementById("chk-out");
+    if (!rq || !out) return;
+    CHK.req = rq.value; CHK.resp = rs.value; CHK.pick = pk.value; CHK.code = cd.value.replace(/\D/g, "");
+    CHK.res = chkRun({ req: CHK.req, resp: CHK.resp, pick: CHK.pick, code: CHK.code });
+    out.innerHTML = chkResultHtml(CHK.res);
+    chkBindOut();
+    if (scroll) { var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches; out.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" }); }
+  }
+  function chkBindOut() {
+    var out = document.getElementById("chk-out"); if (!out) return;
+    Array.prototype.forEach.call(out.querySelectorAll("[data-chk-pick]"), function (b) {
+      b.addEventListener("click", function () { var pk = document.getElementById("chk-pick"); if (pk) pk.value = b.dataset.chkPick; chkExec(false); });
+    });
+    var cp = document.getElementById("chk-copy");
+    if (cp) cp.addEventListener("click", function () { if (CHK.res) copy(chkReportText(CHK.res), cp); });
+    var ai = document.getElementById("chk-ai");
+    if (ai) ai.addEventListener("click", function () { if (CHK.res && window.PortalAgentCheck) window.PortalAgentCheck(chkPayload(CHK.res)); });
+  }
+  function chkBind() {
+    var rq = document.getElementById("chk-req");
+    if (!rq) return;
+    var rs = document.getElementById("chk-resp"), pk = document.getElementById("chk-pick"), cd = document.getElementById("chk-code");
+    rq.addEventListener("input", function () { CHK.req = rq.value; CHK.tpl = false; });
+    rs.addEventListener("input", function () { CHK.resp = rs.value; });
+    cd.addEventListener("input", function () { CHK.code = cd.value; });
+    pk.addEventListener("change", function () { CHK.pick = pk.value; if (CHK.res) chkExec(false); });
+    [rq, rs].forEach(function (el) {
+      el.addEventListener("keydown", function (e) { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); chkExec(true); } });
+    });
+    document.getElementById("chk-run").addEventListener("click", function () { chkExec(true); });
+    document.getElementById("chk-clear").addEventListener("click", function () {
+      CHK.req = CHK.resp = CHK.pick = CHK.code = ""; CHK.res = null; CHK.tpl = false;
+      if (location.hash !== "#/check") nav("#/check"); else render();
+    });
+    Array.prototype.forEach.call(mainEl.querySelectorAll("[data-chk-ex]"), function (b) {
+      b.addEventListener("click", function () {
+        var sp = chkSplit(chkExample(b.dataset.chkEx));
+        rq.value = sp.req.trim(); rs.value = sp.resp; pk.value = ""; cd.value = ""; CHK.tpl = false;
+        chkExec(true);
+      });
+    });
+    chkBindOut();
+  }
+  /* хук для ИИ-агента: проверить текст и вернуть отчёт; секреты наружу не отдаются */
+  window.PortalCheck = {
+    run: function (text) {
+      var sp = chkSplit(text);
+      CHK.req = sp.req.trim(); CHK.resp = sp.resp; CHK.pick = ""; CHK.code = ""; CHK.tpl = false;
+      CHK.res = chkRun({ req: CHK.req, resp: CHK.resp });
+      if (S.tab === "check") render();
+      return chkPayload(CHK.res);
+    }
+  };
+
+
   function render() {
     /* содержание ref-страницы не «прилипает», чтобы не перекрывать текст при прокрутке */
     sideEl.classList.toggle("side-static", S.tab === "faq" && !!S.ref);
@@ -2240,6 +3084,9 @@ If new parameters or features appear in the API, we will let you know.`},
       if (S.doc) { var want = docSlug(S.doc), tgt = null;
         Array.prototype.forEach.call(hs, function (x) { if (!tgt && docSlug(x.textContent) === want) tgt = x; });
         if (tgt) setTimeout(function () { scrollToStable(tgt); }, 0); }
+    } else if (S.tab === "check") {
+      sideEl.innerHTML = chkSide();
+      mainEl.innerHTML = chkView();
     } else if (TOPIC_FAQS[S.tab]) {
       var tc = TOPIC_FAQS[S.tab];
       sideEl.innerHTML = renderSideTopics(tc.list, tc.topics, "#/" + S.tab, tc.filterId, S[tc.q] || "");
@@ -2292,6 +3139,7 @@ If new parameters or features appear in the API, we will let you know.`},
 
   function bindDynamic() {
     bindCredLock();
+    chkBind();
     var f = document.getElementById("op-filter");
     if (f) {
       f.addEventListener("input", function () {
@@ -2495,6 +3343,7 @@ If new parameters or features appear in the API, we will let you know.`},
         else if (it.kind === "topic") { S.openTopic = it.idx; nav("#/" + it.tab + "/" + it.cat); setTimeout(revealOpen, 60); }
         else if (it.kind === "doc") nav("#/" + it.doc);
         else if (it.kind === "home") nav("#/home");
+        else if (it.kind === "tool") nav("#/check");
         else nav("#/ref/" + it.page);
       });
     });
@@ -2648,6 +3497,7 @@ If new parameters or features appear in the API, we will let you know.`},
       if (t.dataset.tab === "faq") t.querySelector(".cnt").textContent = faqQaCount();
       if (TOPIC_FAQS[t.dataset.tab]) t.querySelector(".cnt").textContent = TOPIC_FAQS[t.dataset.tab].list.length;
       if (t.dataset.tab === "mancala") t.querySelector(".cnt").textContent = Object.keys(APIS.mancala.operations).length;
+      if (t.dataset.tab === "check") t.querySelector(".cnt").textContent = chkOpsCount();
       if (APIS[t.dataset.tab]) t.querySelector(".cnt").textContent = Object.keys(APIS[t.dataset.tab].operations).length;
       if (DATA.docs && DATA.docs.some(function(d){return d.key===t.dataset.tab;})) { var dp=DATA.docs.filter(function(d){return d.key===t.dataset.tab;})[0]; t.querySelector(".cnt").textContent=docHeadings(dp).length; }
     });
@@ -2792,6 +3642,8 @@ If new parameters or features appear in the API, we will let you know.`},
 .aiw-chip{border:1px solid var(--line);background:var(--panel-2);color:var(--ink-2);border-radius:999px;padding:5px 10px;font-size:12px;cursor:pointer;line-height:1.2}
 .aiw-chip:hover{border-color:var(--accent);color:var(--accent)}
 @media (max-width:480px){.aiw-panel{right:0;bottom:0;width:100vw;height:100vh;border-radius:0}.aiw-launch{right:14px;bottom:14px}}
+.aiw-msg.u.aiw-req .aiw-utext{font:12px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre-wrap;word-break:break-all;display:block;max-height:220px;overflow:auto}
+.aiw-mode-btn{white-space:nowrap}
 </style>
 
 <button id="aiw-launch" class="aiw-launch" type="button" aria-label="Спросить ИИ-ассистента">
@@ -2810,11 +3662,13 @@ If new parameters or features appear in the API, we will let you know.`},
     <div><b>Ответы генерирует ИИ</b> по материалам портала. Всегда думайте своей головой и проверяйте по документации и у коллег.</div>
   </div>
   <div class="aiw-mode" id="aiw-mode">
-    <button class="aiw-mode-btn is-on" id="aiw-mode-doc" type="button" title="Ответ по документации портала">📄 По документации</button>
+    <button class="aiw-mode-btn is-on" id="aiw-mode-doc" type="button" title="Ответ по документации портала">📄 Документация</button>
+    <button class="aiw-mode-btn" id="aiw-mode-chk" type="button" title="Проверка запроса и ответа по документации">🧪 Проверка</button>
     <button class="aiw-mode-btn" id="aiw-mode-web" type="button" title="Общий ответ из интернета (веб-поиск)">🌐 Интернет</button>
   </div>
   <div class="aiw-body" id="aiw-body">
     <div class="aiw-thread" id="aiw-body-doc"></div>
+    <div class="aiw-thread" id="aiw-body-chk" hidden></div>
     <div class="aiw-thread" id="aiw-body-web" hidden></div>
   </div>
   <div class="aiw-foot">
@@ -2840,13 +3694,25 @@ If new parameters or features appear in the API, we will let you know.`},
       body=document.getElementById("aiw-body"),
       bodyDoc=document.getElementById("aiw-body-doc"),
       bodyWeb=document.getElementById("aiw-body-web"),
+      bodyChk=document.getElementById("aiw-body-chk"),
       input=document.getElementById("aiw-in"),
       sendBtn=document.getElementById("aiw-send"),
       closeBtn=document.getElementById("aiw-close");
 
-  var histDoc=[], histWeb=[], busy=false, KB=null, greeted=false, webGreeted=false, webMode=false, lastUserText="";
-  function col(mode){ return mode==="web" ? bodyWeb : bodyDoc; }
-  function hist(mode){ return mode==="web" ? histWeb : histDoc; }
+  var histDoc=[], histWeb=[], histChk=[], busy=false, KB=null, greeted=false, webGreeted=false, chkGreeted=false, curMode="portal", chkCtx="", lastUserText="";
+  function col(mode){ return mode==="web" ? bodyWeb : mode==="check" ? bodyChk : bodyDoc; }
+  function hist(mode){ return mode==="web" ? histWeb : mode==="check" ? histChk : histDoc; }
+  /* грубая маскировка секретов в свободном тексте режима «Проверка» */
+  function maskLoose(t){
+    return String(t)
+      .replace(/(Bearer\s+)(?!<)[A-Za-z0-9._~+\/=-]{8,}/gi,"$1<скрыт>")
+      .replace(/eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]*/g,"<jwt скрыт>")
+      .replace(/(["']?(?:password|passwd|pass|secret|token|api[_-]?key|x-api-key)["']?\s*[:=]\s*["']?)(?!<)[^"'\s,}]{3,}/gi,"$1<скрыто>");
+  }
+  function looksLikeRequest(t){
+    return /^\s*curl\s/i.test(t) || /^\s*(GET|POST|PUT|PATCH|DELETE)\s+\S/i.test(t) || /https?:\/\/\S+\/api\//i.test(t) || /^\s*[\[{]/.test(t);
+  }
+  var CHK_ASK="Проверь этот запрос (и ответ, если есть) по документации портала. Сначала — вердикт, затем ошибки и как их исправить, затем исправленный пример запроса. Секреты в запросе заменены на <скрыт> — это не ошибка.\n\n";
 
   /* ---------- показывать запуск только после входа (гейт) ---------- */
   function gateOpen(){ var g=document.getElementById("gate"); return !g || g.classList.contains("gate-off"); }
@@ -2995,21 +3861,22 @@ If new parameters or features appear in the API, we will let you know.`},
 
   /* ---------- UI сообщений ---------- */
   function scrollDown(){ body.scrollTop=body.scrollHeight; }
-  function addUser(t, mode){
-    var d=document.createElement("div"); d.className="aiw-msg u";
-    var tag = mode ? ('<span class="aiw-utag">'+(mode==="web"?"🌐 интернет":"📄 документация")+'</span>') : '';
+  function addUser(t, mode, isReq){
+    var d=document.createElement("div"); d.className="aiw-msg u"+(isReq?" aiw-req":"");
+    var tag = mode ? ('<span class="aiw-utag">'+(mode==="web"?"🌐 интернет":mode==="check"?(isReq?"🧪 запрос на проверку":"🧪 проверка"):"📄 документация")+'</span>') : '';
     d.innerHTML = tag + '<span class="aiw-utext"></span>';
     d.querySelector(".aiw-utext").textContent = t;
     col(mode).appendChild(d); scrollDown();
   }
   function modeDisclaimer(mode){
+    if(mode==="check") return '🧪 Разбор ИИ на основе автопроверки портала. Не знает о данных конкретного партнёра — перепроверяйте.';
     return mode==="web"
       ? '🌐 <b>Это общий ответ из интернета — ему верить нельзя.</b> Это не документация портала, обязательно перепроверяйте.'
       : '⚠️ Это ответ ИИ по документации портала — не истина в последней инстанции. Думайте своей головой и проверяйте.';
   }
   function addAI(t, mode, srcQ){
     var d=document.createElement("div"); d.className="aiw-msg a";
-    var extra=(mode!=="web") ? '<button class="aiw-webbtn" type="button">🌐 Этого нет в документации? Поискать в интернете</button>' : '';
+    var extra=(mode==="portal") ? '<button class="aiw-webbtn" type="button">🌐 Этого нет в документации? Поискать в интернете</button>' : '';
     d.innerHTML='<div class="aiw-md">'+mdRender(t)+'</div><div class="aiw-dis'+(mode==="web"?" web":"")+'">'+modeDisclaimer(mode)+'</div>'+extra;
     col(mode).appendChild(d);
     var wb=d.querySelector(".aiw-webbtn");
@@ -3033,17 +3900,36 @@ If new parameters or features appear in the API, we will let you know.`},
     if(!endpoint()) notConfigured();
   }
   function notConfigured(){
-    addSys('⚠️ Агент временно недоступен. Попробуйте чуть позже.', webMode?"web":"portal");
+    addSys('⚠️ Агент временно недоступен. Попробуйте чуть позже.', curMode);
   }
 
   /* ---------- отправка ---------- */
   function deliver(q, mode){
-    if((mode==="web")!==webMode) setMode(mode==="web");  /* показываем ветку этого режима */
+    if(mode!==curMode) setMode(mode);  /* показываем ветку этого режима */
+    if(mode==="check") q=maskLoose(q);
     lastUserText=q;
-    addUser(q, mode); hist(mode).push({role:"user",text:q}); sendBtn.disabled=true;
-    busy=true; typing(true, mode);
+    addUser(q, mode); hist(mode).push({role:"user",text:q});
     if(mode==="web") addSys("🌐 Ищу общий ответ в интернете…", "web");
-    var ctx = mode==="web" ? "" : pickContext(q);
+    post(mode, mode==="web" ? "" : mode==="check" ? (chkCtx || pickContext(q)) : pickContext(q), q);
+  }
+  /* режим «Проверка»: детерминированная проверка в браузере + разбор ИИ (только замаскированный текст) */
+  function deliverCheck(p){
+    if(curMode!=="check") setMode("check");
+    addUser(p.masked, "check", true);
+    var icon = p.level==="ok" ? "✅" : p.level==="warn" ? "⚠️" : "❌";
+    addSys(icon+" <b>Автопроверка:</b> "+esc(p.verdict)+' · <a href="#/check">подробный отчёт</a>', "check");
+    chkCtx = (p.spec ? "ДОКУМЕНТАЦИЯ ЭНДПОИНТА:\n"+p.spec+"\n\n" : "") + "РЕЗУЛЬТАТ АВТОПРОВЕРКИ ПОРТАЛА:\n"+p.report + (p.spec ? "" : "\n\n"+pickContext(p.masked));
+    var m=CHK_ASK+p.masked; lastUserText=m;
+    hist("check").push({role:"user",text:m});
+    if(!endpoint()){ notConfigured(); return; }
+    post("check", chkCtx, m);
+  }
+  function runCheck(text){
+    if(!window.PortalCheck){ addSys("⚠️ Проверка недоступна.", "check"); return; }
+    deliverCheck(window.PortalCheck.run(text));
+  }
+  function post(mode, ctx, q){
+    sendBtn.disabled=true; busy=true; typing(true, mode);
     fetch(endpoint(),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:hist(mode),context:ctx,mode:mode})})
       .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,j:j}; }); })
       .then(function(res){
@@ -3055,9 +3941,10 @@ If new parameters or features appear in the API, we will let you know.`},
   }
   function send(){
     var q=input.value.trim(); if(!q||busy) return;
-    if(!endpoint()){ addUser(q, webMode?"web":"portal"); input.value=""; autosize(); notConfigured(); return; }
+    if(curMode==="check" && looksLikeRequest(q)){ input.value=""; autosize(); runCheck(q); return; }
+    if(!endpoint()){ addUser(curMode==="check"?maskLoose(q):q, curMode); input.value=""; autosize(); notConfigured(); return; }
     input.value=""; autosize();
-    deliver(q, webMode?"web":"portal");
+    deliver(q, curMode);
   }
   function askWeb(q){
     if(busy||!endpoint()) return;
@@ -3074,25 +3961,39 @@ If new parameters or features appear in the API, we will let you know.`},
   sendBtn.onclick=send;
 
   /* ---------- переключатель режима ---------- */
-  function setMode(web){
-    webMode=!!web;
-    document.getElementById("aiw-mode-doc").classList.toggle("is-on",!webMode);
+  function setMode(mode){
+    if(mode===true) mode="web"; if(mode===false||!mode) mode="portal";
+    curMode=mode; var webMode = mode==="web";
+    document.getElementById("aiw-mode-doc").classList.toggle("is-on",mode==="portal");
+    document.getElementById("aiw-mode-chk").classList.toggle("is-on",mode==="check");
     document.getElementById("aiw-mode-web").classList.toggle("is-on",webMode);
-    bodyDoc.hidden = webMode;
+    bodyDoc.hidden = mode!=="portal";
+    bodyChk.hidden = mode!=="check";
     bodyWeb.hidden = !webMode;
-    input.placeholder = webMode ? "Общий вопрос (ответ из интернета)…" : "Спросите про API, эндпоинты, ошибки…";
+    input.placeholder = webMode ? "Общий вопрос (ответ из интернета)…" : mode==="check" ? "Вставьте curl / запрос (и «Ответ:» с телом ответа)…" : "Спросите про API, эндпоинты, ошибки…";
+    if(mode==="check" && !chkGreeted){ chkGreeted=true;
+      addSys('🧪 <b>Режим проверки.</b> Вставьте curl или запрос целиком (можно добавить строку <code>Ответ:</code> и тело ответа). Портал сверит его с документацией, а ИИ объяснит ошибки и предложит исправленный вариант.<br>Токены и пароли маскируются <b>до</b> отправки ИИ. Без ИИ — страница <a href="#/check">Проверка запроса</a>.', "check"); }
     if(webMode && !webGreeted){ webGreeted=true; addSys("🌐 Режим общего поиска: ответы берутся из интернета (общие сведения, не документация портала) — обязательно перепроверяйте.", "web"); }
     scrollDown();
   }
-  document.getElementById("aiw-mode-doc").onclick=function(){ setMode(false); };
-  document.getElementById("aiw-mode-web").onclick=function(){ setMode(true); };
+  document.getElementById("aiw-mode-doc").onclick=function(){ setMode("portal"); };
+  document.getElementById("aiw-mode-chk").onclick=function(){ setMode("check"); };
+  document.getElementById("aiw-mode-web").onclick=function(){ setMode("web"); };
 
   /* ---------- внешний хук: передать вопрос из поиска ---------- */
   window.PortalAgentReady=function(){ return !!endpoint() && gateOpen(); };
   window.PortalAgentAsk=function(q){
     if(!gateOpen()) return;
     openPanel();
+    if(curMode!=="portal") setMode("portal");
     if(q){ input.value=q; autosize(); sendBtn.disabled=false; setTimeout(send,120); }
+  };
+  /* хук страницы «Проверка запроса»: результат уже замаскирован */
+  window.PortalAgentCheck=function(p){
+    if(!gateOpen()||!p) return;
+    openPanel();
+    if(busy) return;
+    deliverCheck(p);
   };
 })();
 </script>
