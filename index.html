@@ -2511,6 +2511,27 @@ If new parameters or features appear in the API, we will let you know.`},
     if (Array.isArray(v) && sch.items) v = v.map(function (x) { return chkCoerce(schemas, sch.items, x, (depth || 0) + 1); });
     return v;
   }
+  /* ответ из лога: status_code=400 response={…} / Body:map[…] / HTTP/1.1 400 */
+  function chkRespLog(text) {
+    var t = String(text || "").trim(), r = { body: t, code: "", notes: [] };
+    if (!t) return r;
+    var cm = t.match(/(?:^|[\s,;])(?:status_code|status|http_code|code|statusCode)\s*[=:]\s*"?(\d{3})\b/i) || t.match(/^HTTP\/[\d.]+\s+(\d{3})/i);
+    if (cm) r.code = cm[1];
+    var bm = t.match(/(?:^|[\s,;])(?:response|resp|body|response_body|responseBody)\s*[=:]\s*([\s\S]*)$/i);
+    if (bm) {
+      var b = bm[1].trim();
+      if (/^map\[/.test(b)) b = JSON.stringify(chkGoMap(b, 0).v);
+      r.body = b;
+    } else if (cm) {
+      var j = t.search(/[{\[]/); r.body = j >= 0 ? t.slice(j).trim() : "";
+    }
+    if (cm || bm) r.notes.push("Ответ распознан как лог" + (r.code ? " (HTTP " + r.code + ")" : "") + ".");
+    if (/[\u201c\u201d\u201e\u00ab\u00bb]/.test(r.body)) {
+      r.body = r.body.replace(/[\u201c\u201d\u201e]/g, '"');
+      r.notes.push("В ответе были «умные» кавычки (“ ”) — обычно так бывает после копирования из мессенджера; заменены на обычные \" для проверки.");
+    }
+    return r;
+  }
   function chkValidate(schemas, sch, v, path, out, o, depth) {
     depth = depth || 0;
     sch = chkDeref(schemas, sch);
@@ -2834,6 +2855,10 @@ If new parameters or features appear in the API, we will let you know.`},
     }
 
     /* 6. ответ */
+    var rl = chkRespLog(respText);
+    rl.notes.forEach(function (n) { add(CHK_G.resp, "info", esc(n)); });
+    if (rl.code && !String(inp.code || "").trim()) inp.code = rl.code;
+    respText = rl.body;
     if (String(respText).trim()) {
       var jr = chkJson(String(respText).trim());
       if (!jr.ok && !jr.fixed) add(CHK_G.resp, "warn", "Ответ не является JSON" + (/^\s*</.test(respText) ? " (похоже на HTML-страницу — обычно это ответ прокси/шлюза, а не API)" : "") + " — структура не проверялась.");
