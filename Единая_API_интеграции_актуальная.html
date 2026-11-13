@@ -2379,7 +2379,13 @@ If new parameters or features appear in the API, we will let you know.`},
     var t = String(text || "");
     var m = /^[ \t]*(?:ответ|тело ответа|response body|response|resp)[ \t]*(?::[ \t]*(.*))?[ \t]*$/im.exec(t) ||
       /^[^"'{}\n]*?\b(?:got|get|getting|received|this|the)?\s*(?:response|ответ)\b[^"'{}:\n]*:[ \t]*([\[{].*)?$/im.exec(t);
-    if (!m) return { req: t, resp: "" };
+    if (!m) {
+      var hm = /\n[ \t]*(HTTP\/[\d.]+\s+\d{3}[^\n]*)/.exec(t);
+      if (hm && /\S/.test(t.slice(0, hm.index))) return { req: t.slice(0, hm.index), resp: t.slice(hm.index + 1).trim() };
+      /* JSON-лог вида {"request": {...}, "response": {...}} */
+      try { var jo = JSON.parse(t.trim()); if (jo && jo.request && jo.response) return { req: JSON.stringify(jo.request), resp: typeof jo.response === "string" ? jo.response : JSON.stringify(jo.response.body !== undefined ? jo.response.body : jo.response) }; } catch (e) {}
+      return { req: t, resp: "" };
+    }
     return { req: t.slice(0, m.index), resp: ((m[1] || "") + "\n" + t.slice(m.index + m[0].length)).trim() };
   }
 
@@ -2438,6 +2444,76 @@ If new parameters or features appear in the API, we will let you know.`},
       if (req.body && /^@/.test(req.body)) { req.notes.push("Тело берётся из файла (" + req.body + ") — вставьте его содержимое, чтобы проверить поля."); req.body = null; req.bodyFromFile = true; }
       if (!req.method) req.method = req.body != null || req.bodyFromFile ? "POST" : "GET";
       return req;
+    }
+    function pyObj(src) { /* python/JS-объект → JSON */
+      var x = String(src).replace(/\bTrue\b/g, "true").replace(/\bFalse\b/g, "false").replace(/\bNone\b/g, "null");
+      try { return JSON.parse(x); } catch (e) {}
+      try { return JSON.parse(x.replace(/'((?:[^'\\]|\\.)*)'/g, function (m0, a) { return JSON.stringify(a.replace(/\\'/g, "'")); }).replace(/,\s*([}\]])/g, "$1")); } catch (e) {}
+      return null;
+    }
+    function balanced(str, from) { /* {…} или […] начиная с позиции from */
+      var o = str[from], c = o === "{" ? "}" : "]", d = 0, q = null;
+      for (var i = from; i < str.length; i++) {
+        var ch = str[i];
+        if (q) { if (ch === "\\") i++; else if (ch === q) q = null; continue; }
+        if (ch === '"' || ch === "'") q = ch;
+        else if (ch === o) d++;
+        else if (ch === c && --d === 0) return str.slice(from, i + 1);
+      }
+      return null;
+    }
+    function strArg(str) { var m = /^\s*(["'`])((?:\\.|(?!\1)[\s\S])*)\1/.exec(str); return m ? m[2].replace(/\\(["'\\])/g, "$1") : null; }
+    function kwObj(src, re) { var m = re.exec(src); if (!m) return null; var i = m.index + m[0].length; while (/\s/.test(src[i])) i++; return /[{\[]/.test(src[i]) ? balanced(src, i) : null; }
+    function headersFrom(o) { if (o && typeof o === "object") Object.keys(o).forEach(function (k) { req.headers.push({ name: k, value: String(o[k]) }); }); }
+    /* fetch("url", { method, headers, body }) — «Copy as fetch» из DevTools */
+    var fm = /\bfetch\s*\(\s*(["'`])([^"'`]+)\1\s*(?:,\s*)?/.exec(t);
+    if (fm) {
+      req.kind = "fetch"; req.url = fm[2];
+      var oi = t.indexOf("{", fm.index + fm[0].length), ob = oi >= 0 ? balanced(t, oi) : null, opt = ob ? pyObj(ob) : null;
+      if (opt) {
+        req.method = String(opt.method || "GET").toUpperCase(); headersFrom(opt.headers);
+        if (opt.body != null) req.body = typeof opt.body === "string" ? opt.body : JSON.stringify(opt.body);
+      } else req.method = "GET";
+      req.notes.push("Распознан вызов fetch().");
+      return req;
+    }
+    /* python requests.post("url", headers={...}, json={...}) */
+    var pm = /\brequests\.(get|post|put|patch|delete)\s*\(\s*/i.exec(t) || /\brequests\.request\s*\(\s*["'](\w+)["']\s*,\s*/i.exec(t);
+    if (pm) {
+      req.kind = "python"; req.method = pm[1].toUpperCase();
+      var rest = t.slice(pm.index + pm[0].length), u = strArg(rest);
+      var um = u ? null : /\burl\s*=\s*(["'])([^"']+)\1/.exec(rest);
+      req.url = u || (um ? um[2] : "");
+      var hj = kwObj(rest, /\bheaders\s*=\s*/); headersFrom(hj && pyObj(hj));
+      var jj = kwObj(rest, /\bjson\s*=\s*/);
+      if (jj) { var jv = pyObj(jj); req.body = jv ? JSON.stringify(jv) : jj; req.ctImplied = true; }
+      else { var dm = /\bdata\s*=\s*/.exec(rest); if (dm) { var after = rest.slice(dm.index + dm[0].length), ds = strArg(after); if (ds != null) req.body = ds; else { var dj = kwObj(rest, /\bdata\s*=\s*/); if (dj) req.body = JSON.stringify(pyObj(dj)); } } }
+      req.notes.push("Распознан Python requests" + (jj ? " (json= сам ставит Content-Type: application/json)" : "") + ".");
+      return req;
+    }
+    /* PowerShell Invoke-RestMethod / Invoke-WebRequest */
+    if (/\bInvoke-(RestMethod|WebRequest)\b/i.test(t)) {
+      req.kind = "powershell";
+      var gp = function (n) { var m = new RegExp("-" + n + "\\s+(?:([\"'])([\\s\\S]*?)\\1|(\\S+))", "i").exec(t); return m ? (m[2] != null ? m[2] : m[3]) : null; };
+      req.url = gp("Uri") || ""; req.method = String(gp("Method") || "GET").toUpperCase();
+      var ctp = gp("ContentType"); if (ctp) req.headers.push({ name: "Content-Type", value: ctp });
+      var hh = /-Headers\s+@\{([^}]*)\}/i.exec(t);
+      if (hh) hh[1].split(/[;\n]/).forEach(function (kv) { var m = /^\s*["']?([\w-]+)["']?\s*=\s*["']?([^"']*)["']?\s*$/.exec(kv); if (m) req.headers.push({ name: m[1], value: m[2] }); });
+      var bd = gp("Body"); if (bd != null) req.body = bd;
+      req.notes.push("Распознан PowerShell " + (/RestMethod/i.test(t) ? "Invoke-RestMethod" : "Invoke-WebRequest") + ".");
+      return req;
+    }
+    /* JSON-лог: {"method":"POST","url":"…","headers":{…},"body":{…}} */
+    if (/^\s*\{/.test(t)) {
+      var jl = null; try { jl = JSON.parse(t); } catch (e) {}
+      if (jl && typeof jl === "object" && (jl.url || jl.uri || jl.endpoint) && (jl.method || jl.headers || jl.body || jl.data || jl.payload)) {
+        req.kind = "jsonlog"; req.url = String(jl.url || jl.uri || jl.endpoint); req.method = String(jl.method || "").toUpperCase();
+        headersFrom(jl.headers || jl.header);
+        var jb = jl.body !== undefined ? jl.body : jl.data !== undefined ? jl.data : jl.payload;
+        if (jb !== undefined && jb !== null && jb !== "") req.body = typeof jb === "string" ? jb : JSON.stringify(jb);
+        req.notes.push("Распознан JSON-лог запроса (url / method / headers / body).");
+        return req;
+      }
     }
     /* лог PHP: Data: array ( … ) Header: array ( 0 => 'K: V' ) */
     if (/=>/.test(t) && /\barray\s*\(/i.test(t)) {
@@ -2503,6 +2579,12 @@ If new parameters or features appear in the API, we will let you know.`},
       if (!req.url && /^\/[\w\-./<>{}%?=&:]+$/.test(s)) req.url = s;
     });
     if (bodyText) req.body = bodyText;
+    /* сырой HTTP: «POST /path HTTP/1.1» + Host */
+    if (/^\//.test(req.url)) {
+      var hh = req.headers.filter(function (h) { return /^host$/i.test(h.name); })[0];
+      if (hh && hh.value) { req.url = "https://" + hh.value + req.url; req.headers = req.headers.filter(function (h) { return h !== hh; }); req.notes.push("Сырой HTTP-запрос: URL собран из пути и заголовка Host."); }
+    }
+    req.headers = req.headers.filter(function (h) { return !/^(content-length|connection|accept-encoding|user-agent|postman-token|cache-control|cookie)$/i.test(h.name); });
     return req;
   }
 
@@ -2796,7 +2878,7 @@ If new parameters or features appear in the API, we will let you know.`},
 
   /* --- основная проверка --- */
   /* подбор эндпоинта по набору полей тела, когда URL нет */
-  function chkGuess(body, method) {
+  function chkGuess(body, method, onlyTpl) {
     var jb = chkJson(body); if (!jb.ok || !jb.value || typeof jb.value !== "object" || Array.isArray(jb.value)) return [];
     var keys = Object.keys(jb.value); if (!keys.length) return [];
     var out = [];
@@ -2804,6 +2886,7 @@ If new parameters or features appear in the API, we will let you know.`},
       Object.keys(api.operations).forEach(function (uid) {
         var op = api.operations[uid], sch = op.body && chkDeref(api.schemas, op.body.schema);
         if (!sch || !sch.properties || (method && op.method !== method)) return;
+        if (onlyTpl && !/[<{]/.test(op.path)) return;
         var props = Object.keys(sch.properties), req = sch.required || [];
         var hit = keys.filter(function (k) { return props.indexOf(k) >= 0; }).length;
         var miss = req.filter(function (k) { return keys.indexOf(k) < 0; }).length;
@@ -2900,6 +2983,9 @@ If new parameters or features appear in the API, we will let you know.`},
           }
         }
         if (found.cands.length) { res.api = found.cands[0].api; res.op = found.cands[0].op; res.cands = found.cands; }
+        else if (req.body != null && (res.cbGuess = chkGuess(req.body, req.method, true)).length && res.cbGuess[0].score > 20) {
+          res.api = res.cbGuess[0].api; res.op = res.cbGuess[0].op; res.cands = res.cbGuess; res.guessedCb = true;
+        }
         else {
           var sg = found.suggest.map(function (x) { return '<a href="#/' + x.api.key + "/" + encodeURIComponent(x.op.uid) + '">' + esc(x.op.method + " " + x.op.path) + "</a> (" + esc(x.api.title) + ")"; });
           add(CHK_G.url, "err", "Путь " + chkC(url.path || req.url) + " не найден ни в одном API портала." + (sg.length ? " Похожие эндпоинты: " + sg.join("; ") + "." : "") +
@@ -2913,7 +2999,8 @@ If new parameters or features appear in the API, we will let you know.`},
       return chkDone(res);
     }
     var templ = /[<{]/.test(op.path);
-    add(CHK_G.url, res.guessed ? "warn" : "ok", (res.guessed ? "URL нет — эндпоинт подобран по полям тела (проверьте!): " : res.auto ? "Эндпоинт определён по URL: " : "Эндпоинт выбран вручную: ") + "<b>" + esc(op.method + " " + op.path) + "</b> — " + esc(api.title) + (op.summary ? ", " + esc(op.summary) : ""));
+    if (res.guessedCb) add(CHK_G.url, "warn", "Пути " + chkC(url.path) + " нет в портале — похоже на callback на стороне партнёра (адрес задаёт он сам). Эндпоинт подобран по полям тела: <b>" + esc(op.summary || op.path) + "</b> (" + esc(api.title) + "); при необходимости выберите другой в списке.");
+    else add(CHK_G.url, res.guessed ? "warn" : "ok", (res.guessed ? "URL нет — эндпоинт подобран по полям тела (проверьте!): " : res.auto ? "Эндпоинт определён по URL: " : "Эндпоинт выбран вручную: ") + "<b>" + esc(op.method + " " + op.path) + "</b> — " + esc(api.title) + (op.summary ? ", " + esc(op.summary) : ""));
     if (found && found.how === "ellipsis") add(CHK_G.url, "warn", "Путь в URL обрезан (<code>…</code>) — эндпоинт подобран по окончанию " + chkC(found.ellTail) + ". Проверьте полный путь: " + chkC(op.path) + ".");
     if (found && found.how === "suffix") add(CHK_G.url, "warn", "Путь в запросе " + chkC(url.path) + " длиннее, чем в портале (" + chkC(op.path) + "): перед ним есть лишний префикс.");
     if (res.byBody) {
@@ -3300,7 +3387,11 @@ If new parameters or features appear in the API, we will let you know.`},
         "Команду <code>curl</code> — из Postman, DevTools или письма партнёра",
         "Строку <code>POST https://…</code>, ниже заголовки <code>Имя: значение</code>, ниже JSON",
         "Только JSON-тело — тогда выберите эндпоинт в списке",
-        "Запрос и ответ вместе: после запроса строка <code>Ответ:</code> и тело ответа"
+        "Запрос и ответ вместе: после запроса строка <code>Ответ:</code> / <code>Response:</code> или <code>HTTP/1.1 400</code>, затем тело ответа",
+        "DevTools «Copy as fetch», Python <code>requests</code>, PowerShell <code>Invoke-RestMethod</code>, сырой HTTP с <code>Host:</code>",
+        "Логи: Go (<code>Headers:map[…]</code>), PHP (<code>array (…)</code>), JSON-лог с <code>url</code>/<code>body</code>",
+        "Сообщение из Slack/Telegram целиком — служебные строки и «умные» кавычки чистятся сами",
+        "Только ответ — без запроса проверка разберёт ошибку"
       ]) + "</div></div>";
   }
   function chkPayload(res) {
