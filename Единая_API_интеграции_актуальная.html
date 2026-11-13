@@ -2395,6 +2395,20 @@ If new parameters or features appear in the API, we will let you know.`},
       if (!req.method) req.method = req.body != null || req.bodyFromFile ? "POST" : "GET";
       return req;
     }
+    /* лог Go-сервиса: method=POST url=… Headers:map[…] Body:map[…] */
+    if (/(^|\s)method=\w+/.test(t) && /(^|\s)url=\S+/.test(t)) {
+      req.kind = "golog"; req.goLog = true;
+      req.method = t.match(/(?:^|\s)method=(\w+)/)[1].toUpperCase();
+      req.url = t.match(/(?:^|\s)url=(\S+)/)[1];
+      var hi = t.search(/Headers?\s*:\s*map\[/i);
+      if (hi >= 0) { var hs = t.indexOf("map[", hi), hv = chkGoMap(t, hs).v;
+        Object.keys(hv).forEach(function (k) { req.headers.push({ name: k, value: Array.isArray(hv[k]) ? hv[k].join(" ") : String(hv[k]) }); }); }
+      var bj = t.search(/Body\s*:\s*map\[/i);
+      if (bj >= 0) req.body = JSON.stringify(chkGoMap(t, t.indexOf("map[", bj)).v);
+      else { var bk = t.match(/Body\s*:\s*([{\[][\s\S]*)$/i); if (bk) req.body = bk[1].trim(); }
+      req.notes.push("Распознан лог Go-сервиса (Headers:map[…] Body:map[…]). Типы значений в таком логе не видны — числа и boolean приведены по схеме портала.");
+      return req;
+    }
     /* «METHOD URL», строки «Заголовок: значение», затем JSON */
     req.kind = "http";
     /* тело — первая «{» или «[» в начале строки (но не {{переменная}} Postman) либо сразу после URL */
@@ -2464,6 +2478,38 @@ If new parameters or features appear in the API, we will let you know.`},
     var n = 0;
     while (sch && sch.$ref && n++ < 10) sch = schemas[sch.$ref.split("/").pop()];
     return sch || null;
+  }
+  /* Go-лог: map[k:v k2:map[…]] → объект; значения — строки (типы в логе теряются) */
+  function chkGoMap(s, i) {
+    var o = {}, n = s.length;
+    i += 4; /* "map[" */
+    while (i < n) {
+      while (s[i] === " ") i++;
+      if (s[i] === "]") return { v: o, i: i + 1 };
+      var c = s.indexOf(":", i); if (c < 0) break;
+      var k = s.slice(i, c); i = c + 1;
+      if (s.substr(i, 4) === "map[") { var r = chkGoMap(s, i); o[k] = r.v; i = r.i; continue; }
+      if (s[i] === "[") { var d = 1, j = i + 1; while (j < n && d) { if (s[j] === "[") d++; else if (s[j] === "]") d--; j++; }
+        o[k] = s.slice(i + 1, j - 1).split(" ").filter(Boolean); i = j; continue; }
+      /* значение до следующего « ключ:» или закрывающей «]» */
+      var m = /( [A-Za-z_][\w.-]*:)|(\](?= |$|\]))/g; m.lastIndex = i;
+      var mm = m.exec(s), e = mm ? mm.index : n;
+      o[k] = s.slice(i, e); i = e;
+    }
+    return { v: o, i: n };
+  }
+  /* приводим строки из Go-лога к типам схемы */
+  function chkCoerce(schemas, sch, v, depth) {
+    sch = chkDeref(schemas, sch); if (!sch || (depth || 0) > 12) return v;
+    if (sch.allOf) sch.allOf.forEach(function (x) { v = chkCoerce(schemas, x, v, (depth || 0) + 1); });
+    if (typeof v === "string") {
+      if (sch.type === "boolean" && /^(true|false)$/.test(v)) return v === "true";
+      if ((sch.type === "integer" || sch.type === "number") && /^-?\d+(\.\d+)?(e[+-]?\d+)?$/i.test(v)) return +v;
+      return v;
+    }
+    if (v && typeof v === "object" && !Array.isArray(v) && sch.properties) Object.keys(v).forEach(function (k) { if (sch.properties[k]) v[k] = chkCoerce(schemas, sch.properties[k], v[k], (depth || 0) + 1); });
+    if (Array.isArray(v) && sch.items) v = v.map(function (x) { return chkCoerce(schemas, sch.items, x, (depth || 0) + 1); });
+    return v;
   }
   function chkValidate(schemas, sch, v, path, out, o, depth) {
     depth = depth || 0;
@@ -2773,6 +2819,7 @@ If new parameters or features appear in the API, we will let you know.`},
           (jb.fixed ? " Дальше поля проверены по автоматически исправленному варианту." : " Поля не проверялись."));
       }
       if (jb.ok || jb.fixed) {
+        if (req.goLog && bodySchema) jb.value = chkCoerce(api.schemas, bodySchema, jb.value);
         res.bodyVal = jb.value;
         if (jb.ok) add(CHK_G.body, "ok", "Тело — валидный JSON.");
         if (bodySchema) {
