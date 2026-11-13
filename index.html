@@ -2372,11 +2372,24 @@ If new parameters or features appear in the API, we will let you know.`},
   /* один текст «запрос + Ответ: …» → две части */
   function chkSplit(text) {
     var t = String(text || "");
-    var m = /^[ \t]*(?:ответ|тело ответа|response body|response|resp)[ \t]*(?::[ \t]*(.*))?[ \t]*$/im.exec(t);
+    var m = /^[ \t]*(?:ответ|тело ответа|response body|response|resp)[ \t]*(?::[ \t]*(.*))?[ \t]*$/im.exec(t) ||
+      /^[^"'{}\n]*?\b(?:got|get|getting|received|this|the)?\s*(?:response|ответ)\b[^"'{}:\n]*:[ \t]*([\[{].*)?$/im.exec(t);
     if (!m) return { req: t, resp: "" };
     return { req: t.slice(0, m.index), resp: ((m[1] || "") + "\n" + t.slice(m.index + m[0].length)).trim() };
   }
 
+  /* текст из Slack/Telegram: убрать «[дата] Имя:», типографские кавычки → обычные */
+  function chkClean(text) {
+    var t = String(text || ""), notes = [];
+    var t2 = t.replace(/^[ \t]*\[\d{1,2}[.\/-]\d{1,2}[.\/-]\d{2,4}[^\]\n]*\][ \t]*[^:\n]{1,40}:[ \t]*/gm, "");
+    if (t2 !== t) notes.push("Убраны служебные строки чата («[дата] Имя:»).");
+    t = t2;
+    if (/[\u2018\u2019\u201a\u201c\u201d\u201e\u00ab\u00bb]/.test(t)) {
+      t = t.replace(/[\u2018\u2019\u201a]/g, "'").replace(/[\u201c\u201d\u201e]/g, '"');
+      notes.push("Типографские кавычки (‘ ’ “ ”) заменены на обычные — так бывает после копирования из мессенджера. В реальном запросе должны быть обычные ' и \".");
+    }
+    return { text: t, notes: notes };
+  }
   function chkParse(text) {
     var req = { method: "", url: "", headers: [], body: null, kind: "", notes: [], ctImplied: false };
     var t = String(text || "").replace(/\u00a0/g, " ").replace(/[\u200b\ufeff]/g, "").trim();
@@ -2386,6 +2399,8 @@ If new parameters or features appear in the API, we will let you know.`},
       if (i < 0) { i = line.indexOf(";"); if (i < 0) return; }
       req.headers.push({ name: line.slice(0, i).trim(), value: line.slice(i + 1).trim() });
     }
+    var cpos = t.search(/(^|\n)[ \t>$]*curl(\.exe)?\s/i);
+    if (cpos > 0) { req.notes.push("Текст перед командой curl пропущен."); t = t.slice(cpos).replace(/^[\s>$]+/, ""); }
     if (/^\s*curl(\.exe)?(\s|$)/i.test(t)) {
       req.kind = "curl";
       var tk = chkTokens(t), i = 1, a, parts = [];
@@ -2717,6 +2732,11 @@ If new parameters or features appear in the API, we will let you know.`},
     var res = { cands: [], how: "", suggest: [] };
     var p = chkNormPath(url.path);
     if (!p) return res;
+    var ell = /(\u2026|\.\.\.)/.test(decodeURIComponent(url.path || "").replace(/%E2%80%A6/gi, "\u2026")) ? chkNormPath(decodeURIComponent(url.path).split(/\u2026|\.\.\./).pop()) : "";
+    if (ell) {
+      var eh = chkAllOps().filter(function (x) { return !/[<{]/.test(x.op.path) && chkNormPath(x.op.path).slice(-ell.length) === ell && (!method || x.op.method === method); });
+      if (eh.length) { res.how = "ellipsis"; res.cands = eh; res.ellTail = ell; return res; }
+    }
     var all = chkAllOps().filter(function (x) { return !/[<{]/.test(x.op.path); });
     var hit = all.filter(function (x) { return chkNormPath(x.op.path) === p; });
     if (hit.length) res.how = "exact";
@@ -2802,8 +2822,10 @@ If new parameters or features appear in the API, we will let you know.`},
   function chkRun(inp) {
     var res = { items: [], api: null, op: null, cands: [], req: null, auto: !inp.pick, bodyVal: undefined, respVal: undefined, respText: "" };
     function add(g, l, t) { res.items.push({ g: g, l: l, t: t }); }
-    var reqText = inp.req || "", respText = inp.resp || "";
+    var cq = chkClean(inp.req || ""), cr = chkClean(inp.resp || "");
+    var reqText = cq.text, respText = cr.text;
     if (!String(respText).trim()) { var sp = chkSplit(reqText); reqText = sp.req; respText = sp.resp; }
+    cq.notes.concat(cr.notes).filter(function (x, i, a) { return a.indexOf(x) === i; }).forEach(function (n) { add(CHK_G.url, "info", esc(n)); });
     res.respText = respText;
     var lt = chkLogTime(reqText + "\n" + respText);
     var req = chkParse(reqText); res.req = req;
@@ -2859,6 +2881,7 @@ If new parameters or features appear in the API, we will let you know.`},
     }
     var templ = /[<{]/.test(op.path);
     add(CHK_G.url, res.guessed ? "warn" : "ok", (res.guessed ? "URL нет — эндпоинт подобран по полям тела (проверьте!): " : res.auto ? "Эндпоинт определён по URL: " : "Эндпоинт выбран вручную: ") + "<b>" + esc(op.method + " " + op.path) + "</b> — " + esc(api.title) + (op.summary ? ", " + esc(op.summary) : ""));
+    if (found && found.how === "ellipsis") add(CHK_G.url, "warn", "Путь в URL обрезан (<code>…</code>) — эндпоинт подобран по окончанию " + chkC(found.ellTail) + ". Проверьте полный путь: " + chkC(op.path) + ".");
     if (found && found.how === "suffix") add(CHK_G.url, "warn", "Путь в запросе " + chkC(url.path) + " длиннее, чем в портале (" + chkC(op.path) + "): перед ним есть лишний префикс.");
     if (res.byBody) {
       res.cands = res.cands.filter(function (x) { return x.api === api; });
@@ -2943,6 +2966,7 @@ If new parameters or features appear in the API, we will let you know.`},
         if (!v) add(CHK_G.head, "err", "заголовок " + chkC(p.name) + " пустой.");
         else if (chkIsPh(v)) add(CHK_G.head, "info", chkC(p.name) + ": указан плейсхолдер " + chkC(v) + " — подставьте реальное значение.");
         else if ((ln === "b2b-client-id" || ln === "request-id" || /uuid/i.test(p.description || "")) && !CHK_UUID.test(v)) add(CHK_G.head, "warn", chkC(p.name) + ": ожидается UUID, передано " + chkVal(v) + ".");
+        else if (ln === "vendor-id" && CHK_VENDOR_SUB[v.replace(/-/g, "").toLowerCase()]) add(CHK_G.head, "ok", chkC(p.name) + " передан — это вендор <b>" + esc(CHK_VENDOR_SUB[v.replace(/-/g, "").toLowerCase()]) + "</b>.");
         else add(CHK_G.head, "ok", chkC(p.name) + " передан.");
       });
       /* Authorization: содержимое токена наружу не выводится */
@@ -3071,6 +3095,13 @@ If new parameters or features appear in the API, we will let you know.`},
             });
           }
           if (errStr) add(CHK_G.resp, "err", "API вернул ошибку: " + chkVal(errStr) + '. <a href="#/search/' + encodeURIComponent(errStr.slice(0, 60)) + '">Искать по порталу →</a>');
+          var KE = [
+            [/connection not found/i, "Для этой пары B2B-компания (<code>b2b-client-id</code>) + вендор (<code>vendor-id</code>) на этой среде нет подключения (connection). Проверьте, что оба ID верные и относятся к этой среде (UAT/PROD), и что в Back Office у B2B-компании создано и включено подключение к вендору."],
+            [/vendor not found|unknown vendor/i, "Вендор с таким <code>vendor-id</code> не найден на этой среде."],
+            [/b2b apikey is invalid|api.?key.*invalid/i, "<code>api_key</code> не подходит к <code>b2b_id</code> или к среде."],
+            [/token.*(expired|invalid)|unauthori[sz]ed/i, "Проблема с Bearer-токеном: истёк или выпущен для другой B2B-компании/среды — сгенерируйте новый."]
+          ];
+          if (errStr) KE.forEach(function (k) { if (k[0].test(errStr)) add(CHK_G.resp, "info", k[1]); });
           if (errStr && /internal/i.test(errStr)) add(CHK_G.resp, "info", "«Internal error» — сбой на стороне сервера, а не ошибка формата запроса. Если по запросу выше ошибок нет, передайте в разработку время запроса" + (lt ? " (" + esc(lt.raw) + ")" : "") + ", " + chkC("b2b-client-id") + " и тело запроса — по ним найдут запрос в логах.");
           if (rv.error_code != null && rv.error_code !== 0 && rv.error_code !== "0") add(CHK_G.resp, "err", chkC("error_code") + " = " + chkVal(rv.error_code) + (CHK_ERR_CODES[rv.error_code] ? ": " + esc(CHK_ERR_CODES[rv.error_code]) : "") + (rv.error_message ? " (" + chkC("error_message") + ": " + chkVal(rv.error_message) + ")" : "") + ".");
           else if (rv.error_code === 0 || rv.error_code === "0") add(CHK_G.resp, "ok", chkC("error_code") + " = 0 — успешная обработка.");
