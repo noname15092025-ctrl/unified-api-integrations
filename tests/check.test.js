@@ -55,6 +55,8 @@ const CASES = [
     text: `Ответ:\n{“error”:“”client_id” is expected as UUID”}` },
   { name: "Ответ не JSON — простой текст ошибки", exp: { op: null, has: ["не является валидным JSON", "должен быть UUID"] },
     text: `Ответ:\nerror: client_id is expected as UUID` },
+  { name: "Go-лог: URL строкой, Method:POST, Headers:map / Body:map", exp: { op: "POST /api/v1/b2b/deposit", has: ["лог Go-сервиса", "Обязательные поля на месте"], not: ["Тела запроса нет"] },
+    text: `https://transaction.uat.agg.bet/api/v1/b2b/deposit\nMethod:POST\n\nHeaders:map[Authorization:Bearer <token> Content-Type:application/json b2b-client-id:${UUID} vendor-id:89ad7ebc-6732-11ed-9022-0242ac120002]\n\nBody:map[amount:100 b2c_id:test_player currency:BRL transaction_id:00291d2529] Timeout:60}` },
   { name: "Секреты не попадают в текст для ИИ", exp: { op: "POST /api/v1/b2b/token", maskedNot: ["testkey0000", "eyJhbGciOiJIUzI1NiJ9.eyJleHAiOjF9.c2lnbmF0dXJl"] },
     text: `curl -X POST 'https://transaction.uat.agg.bet/api/v1/b2b/token' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJleHAiOjF9.c2lnbmF0dXJl' -H 'Content-Type: application/json' -d '${TOKEN_BODY}'` }
 ];
@@ -78,6 +80,7 @@ const CASES = [
     if ("op" in e && r.found !== e.op) problems.push(`эндпоинт ${r.found} вместо ${e.op}`);
     if (e.level && r.level !== e.level) problems.push(`вердикт ${r.level} вместо ${e.level}`);
     (e.has || []).forEach((s) => { if (r.report.indexOf(s) < 0) problems.push(`нет «${s}»`); });
+    (e.not || []).forEach((s) => { if (r.report.indexOf(s) >= 0) problems.push(`лишнее «${s}»`); });
     (e.maskedNot || []).forEach((s) => { if (r.masked.indexOf(s) >= 0) problems.push(`секрет «${s.slice(0, 8)}…» ушёл бы в ИИ`); });
     if (problems.length) { fail++; console.log("  ✗ " + c.name + " — " + problems.join("; ")); }
     else console.log("  ✓ " + c.name);

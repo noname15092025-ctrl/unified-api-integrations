@@ -2552,10 +2552,12 @@ If new parameters or features appear in the API, we will let you know.`},
       return req;
     }
     /* лог Go-сервиса: method=POST url=… Headers:map[…] Body:map[…] */
-    if (/(^|\s)method=\w+/.test(t) && /(^|\s)url=\S+/.test(t)) {
+    if ((/(^|\s)method=\w+/.test(t) && /(^|\s)url=\S+/.test(t)) || /(Headers?|Body)\s*:\s*map\[/i.test(t)) {
       req.kind = "golog"; req.goLog = true;
-      req.method = t.match(/(?:^|\s)method=(\w+)/)[1].toUpperCase();
-      req.url = t.match(/(?:^|\s)url=(\S+)/)[1];
+      var gm = t.match(/(?:^|[\s{,])method\s*[=:]\s*"?(\w+)/i) || t.match(/(?:^|\n)\s*(GET|POST|PUT|PATCH|DELETE)\b/);
+      if (gm) req.method = gm[1].toUpperCase();
+      var gu = t.match(/(?:^|[\s{,])(?:url|uri|endpoint)\s*[=:]\s*"?(https?:\/\/[^\s"]+)/i) || t.match(/https?:\/\/[^\s"'\]]+/);
+      if (gu) req.url = gu[1] || gu[0];
       var hi = t.search(/Headers?\s*:\s*map\[/i);
       if (hi >= 0) { var hs = t.indexOf("map[", hi), hv = chkGoMap(t, hs).v;
         Object.keys(hv).forEach(function (k) { req.headers.push({ name: k, value: Array.isArray(hv[k]) ? hv[k].join(" ") : String(hv[k]) }); }); }
@@ -2680,7 +2682,7 @@ If new parameters or features appear in the API, we will let you know.`},
       if (s[i] === "[") { var d = 1, j = i + 1; while (j < n && d) { if (s[j] === "[") d++; else if (s[j] === "]") d--; j++; }
         o[k] = s.slice(i + 1, j - 1).split(" ").filter(Boolean); i = j; continue; }
       /* значение до следующего « ключ:» или закрывающей «]» */
-      var m = /( [A-Za-z_][\w.-]*:)|(\](?= |$|\]))/g; m.lastIndex = i;
+      var m = /( [A-Za-z_][\w.-]*:)|(\](?=\s|$|\]))/g; m.lastIndex = i;
       var mm = m.exec(s), e = mm ? mm.index : n;
       o[k] = s.slice(i, e); i = e;
     }
@@ -2959,6 +2961,12 @@ If new parameters or features appear in the API, we will let you know.`},
     [/b2b apikey is invalid|api.?key.*invalid/i, "<code>api_key</code> не подходит к <code>b2b_id</code> или к среде."],
     [/token.*(expired|invalid)|unauthori[sz]ed/i, "Проблема с Bearer-токеном: истёк или выпущен для другой B2B-компании/среды — сгенерируйте новый."]
   ];
+  /* ключевая фраза ошибки для поиска: без ID, UUID и кавычек */
+  function chkSearchQ(t) {
+    var x = String(t || "").replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, " ").replace(/\b[\w-]*\s*ID\s*=\s*\\?"[^"]*\\?"/gi, " ").replace(/["'\\]/g, " ");
+    var parts = x.split(/[:;]/).map(function (p) { return p.replace(/[,=]+/g, " ").replace(/\s+/g, " ").trim(); }).filter(function (p) { return /[a-zа-я]{3}/i.test(p); });
+    return (parts.length ? parts[parts.length - 1] : x.trim()).slice(0, 50);
+  }
   function chkKE(text, cb) {
     var done = 0;
     CHK_KE.forEach(function (k) { if (done) return; var m = k[0].exec(text); if (m) { cb(typeof k[1] === "function" ? k[1](m) : k[1]); if (typeof k[1] === "function") done = 1; } });
@@ -2992,7 +3000,7 @@ If new parameters or features appear in the API, we will let you know.`},
       if (ro && typeof ro === "object" && !Array.isArray(ro)) {
         var es = typeof ro.error === "string" ? ro.error : ro.error && typeof ro.error === "object" ? (ro.error.code != null ? ro.error.code + " " : "") + (ro.error.message || "") : typeof ro.Msg === "string" && ro.Error ? ro.Error + " " + ro.Msg : "";
         if (es) {
-          add(CHK_G.resp, "err", "API вернул ошибку: " + chkValLong(es) + '. <a href="#/search/' + encodeURIComponent(String(es).slice(0, 60)) + '">Искать по порталу →</a>');
+          add(CHK_G.resp, "err", "API вернул ошибку: " + chkValLong(es) + '. <a href="#/search/' + encodeURIComponent(chkSearchQ(es)) + '">Искать по порталу →</a>');
           chkKE(es, function (t) { add(CHK_G.resp, "info", t); });
           if (/internal/i.test(es)) add(CHK_G.resp, "info", "«Internal error» — сбой на стороне сервера; передайте в разработку время запроса, b2b-client-id и тело запроса.");
           var ids = String(es).match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi) || [];
@@ -3153,6 +3161,7 @@ If new parameters or features appear in the API, we will let you know.`},
           var av = auth[0].value;
           if (!av) add(CHK_G.head, "err", chkC("Authorization") + " пустой.");
           else if (chkIsPh(av)) add(CHK_G.head, "info", chkC("Authorization") + ": указан плейсхолдер — токен не проверялся.");
+          else if (!/^bearer\s+\S+/i.test(av) && req.goLog && /^eyJ/.test(av)) add(CHK_G.head, "warn", chkC("Authorization") + ": в логе токен без префикса <code>Bearer</code>. Если клиент так и отправляет — это ошибка (нужно <code>Bearer &lt;token&gt;</code>); если префикс просто не попал в лог — всё в порядке.");
           else if (!/^bearer\s+\S+/i.test(av)) add(CHK_G.head, "err", chkC("Authorization") + " должен иметь вид <code>Bearer &lt;token&gt;</code> — нет префикса <code>Bearer</code>.");
           else {
             if (!/^Bearer /.test(av)) add(CHK_G.head, "warn", chkC("Authorization") + ": префикс лучше писать как <code>Bearer</code> + один пробел.");
@@ -3263,7 +3272,7 @@ If new parameters or features appear in the API, we will let you know.`},
           if (!errStr && rv.error && typeof rv.error === "object" && (rv.error.code != null || rv.error.message)) {
             add(CHK_G.resp, "err", "API вернул ошибку" + (rv.error.code != null ? " <b>" + esc(String(rv.error.code)) + "</b>" : "") + (rv.error.message ? ": " + chkVal(rv.error.message) : "") + "." +
               (api.key === "winfinity" && CHK_WINF[rv.error.code] ? " " + esc(CHK_WINF[rv.error.code]) : "") +
-              (rv.error.message ? ' <a href="#/search/' + encodeURIComponent(String(rv.error.message).slice(0, 60)) + '">Искать по порталу →</a>' : ""));
+              (rv.error.message ? ' <a href="#/search/' + encodeURIComponent(chkSearchQ(rv.error.message)) + '">Искать по порталу →</a>' : ""));
           }
           if (api.key === "mancala-prov") {
             var MC = { 0: "Success", 1: "Hash mismatch — неверная подпись Hash (MD5) или API key", 4: "Internal service error — сессия не найдена/не активна, amount < 0, bet ⩽ win, ошибка B2B или системная ошибка AGG",
@@ -3274,7 +3283,7 @@ If new parameters or features appear in the API, we will let you know.`},
               else add(CHK_G.resp, "err", chkC(kv[0]) + " = <b>" + kv[1] + "</b>" + (MC[kv[1]] ? ": " + esc(MC[kv[1]]) : "") + (rv.Msg || rv.Message ? " (" + chkVal(rv.Msg || rv.Message) + ")" : "") + ".");
             });
           }
-          if (errStr) add(CHK_G.resp, "err", "API вернул ошибку: " + chkValLong(errStr) + '. <a href="#/search/' + encodeURIComponent(errStr.slice(0, 60)) + '">Искать по порталу →</a>');
+          if (errStr) add(CHK_G.resp, "err", "API вернул ошибку: " + chkValLong(errStr) + '. <a href="#/search/' + encodeURIComponent(chkSearchQ(errStr)) + '">Искать по порталу →</a>');
           if (errStr) chkKE(errStr, function (t) { add(CHK_G.resp, "info", t); });
           if (errStr && /internal/i.test(errStr)) add(CHK_G.resp, "info", "«Internal error» — сбой на стороне сервера, а не ошибка формата запроса. Если по запросу выше ошибок нет, передайте в разработку время запроса" + (lt ? " (" + esc(lt.raw) + ")" : "") + ", " + chkC("b2b-client-id") + " и тело запроса — по ним найдут запрос в логах.");
           if (rv.error_code != null && rv.error_code !== 0 && rv.error_code !== "0") add(CHK_G.resp, "err", chkC("error_code") + " = " + chkVal(rv.error_code) + (CHK_ERR_CODES[rv.error_code] ? ": " + esc(CHK_ERR_CODES[rv.error_code]) : "") + (rv.error_message ? " (" + chkC("error_message") + ": " + chkVal(rv.error_message) + ")" : "") + ".");
@@ -3487,6 +3496,18 @@ If new parameters or features appear in the API, we will let you know.`},
     var out = document.getElementById("chk-out"); if (!out) return;
     Array.prototype.forEach.call(out.querySelectorAll("[data-chk-pick]"), function (b) {
       b.addEventListener("click", function () { var pk = document.getElementById("chk-pick"); if (pk) pk.value = b.dataset.chkPick; chkExec(false); });
+    });
+    Array.prototype.forEach.call(out.querySelectorAll('a[href^="#/search/"]'), function (a) {
+      a.addEventListener("click", function (e) {
+        e.preventDefault();
+        var q = decodeURIComponent(a.getAttribute("href").slice(9));
+        if (!searchInput) return;
+        searchInput.value = q;
+        var sc = document.getElementById("search-clear"); if (sc) sc.style.display = "";
+        window.scrollTo(0, 0);
+        searchInput.focus();
+        runSearch();
+      });
     });
     var cp = document.getElementById("chk-copy");
     if (cp) cp.addEventListener("click", function () { if (CHK.res) copy(chkReportText(CHK.res), cp); });
