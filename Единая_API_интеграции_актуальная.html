@@ -2819,6 +2819,12 @@ If new parameters or features appear in the API, we will let you know.`},
     if (m[4]) ms -= (m[4] === "-" ? -1 : 1) * ((+m[5]) * 60 + (+(m[6] || 0))) * 60000;
     return { ms: ms, raw: m[0].trim(), tz: !!m[3] };
   }
+  var CHK_KE = [
+    [/connection not found/i, "Для этой пары B2B-компания (<code>b2b-client-id</code>) + вендор (<code>vendor-id</code>) на этой среде нет подключения (connection). Проверьте, что оба ID верные и относятся к этой среде (UAT/PROD), и что в Back Office у B2B-компании создано и включено подключение к вендору."],
+    [/vendor not found|unknown vendor/i, "Вендор с таким <code>vendor-id</code> не найден на этой среде."],
+    [/b2b apikey is invalid|api.?key.*invalid/i, "<code>api_key</code> не подходит к <code>b2b_id</code> или к среде."],
+    [/token.*(expired|invalid)|unauthori[sz]ed/i, "Проблема с Bearer-токеном: истёк или выпущен для другой B2B-компании/среды — сгенерируйте новый."]
+  ];
   function chkRun(inp) {
     var res = { items: [], api: null, op: null, cands: [], req: null, auto: !inp.pick, bodyVal: undefined, respVal: undefined, respText: "" };
     function add(g, l, t) { res.items.push({ g: g, l: l, t: t }); }
@@ -2830,7 +2836,29 @@ If new parameters or features appear in the API, we will let you know.`},
     var lt = chkLogTime(reqText + "\n" + respText);
     var req = chkParse(reqText); res.req = req;
     var url = chkUrl(req.url); res.url = url;
-    if (!req.kind) { add(CHK_G.url, "err", "Запрос не вставлен."); return chkDone(res); }
+    if (!req.kind) {
+      if (!String(respText).trim()) { add(CHK_G.url, "err", "Запрос не вставлен."); return chkDone(res); }
+      add(CHK_G.url, "info", "Запрос не вставлен — проверен только ответ. Чтобы проверить эндпоинт, заголовки и тело, вставьте и запрос.");
+      var rlo = chkRespLog(respText); rlo.notes.forEach(function (n) { add(CHK_G.resp, "info", esc(n)); });
+      res.respText = rlo.body;
+      var jo = chkJson(rlo.body);
+      if (!jo.ok && !jo.fixed) { add(CHK_G.resp, "warn", "Ответ не является JSON" + (jo.hints.length ? ": " + jo.hints.join("; ") : "") + "."); return chkDone(res); }
+      var ro = jo.value; res.respVal = ro;
+      if (jo.ok) add(CHK_G.resp, "ok", "Ответ — валидный JSON.");
+      if (ro && typeof ro === "object" && !Array.isArray(ro)) {
+        var es = typeof ro.error === "string" ? ro.error : ro.error && typeof ro.error === "object" ? (ro.error.code != null ? ro.error.code + " " : "") + (ro.error.message || "") : typeof ro.Msg === "string" && ro.Error ? ro.Error + " " + ro.Msg : "";
+        if (es) {
+          add(CHK_G.resp, "err", "API вернул ошибку: " + chkVal(es) + '. <a href="#/search/' + encodeURIComponent(String(es).slice(0, 60)) + '">Искать по порталу →</a>');
+          CHK_KE.forEach(function (k) { if (k[0].test(es)) add(CHK_G.resp, "info", k[1]); });
+          if (/internal/i.test(es)) add(CHK_G.resp, "info", "«Internal error» — сбой на стороне сервера; передайте в разработку время запроса, b2b-client-id и тело запроса.");
+          var ids = String(es).match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi) || [];
+          ids.forEach(function (id) { var nm = CHK_VENDOR_SUB[id.replace(/-/g, "").toLowerCase()]; if (nm) add(CHK_G.resp, "info", chkC(id) + " — это vendor_id <b>" + esc(nm) + "</b>."); });
+        }
+        if (ro.error_code != null && ro.error_code !== 0 && ro.error_code !== "0") add(CHK_G.resp, "err", chkC("error_code") + " = " + chkVal(ro.error_code) + (CHK_ERR_CODES[ro.error_code] ? ": " + esc(CHK_ERR_CODES[ro.error_code]) : "") + ".");
+        if (!es && (ro.error_code === 0 || ro.error_code === "0")) add(CHK_G.resp, "ok", chkC("error_code") + " = 0 — успешная обработка.");
+      }
+      return chkDone(res);
+    }
     req.notes.forEach(function (n) { add(CHK_G.url, "info", esc(n)); });
 
     /* 1. эндпоинт */
@@ -3095,13 +3123,7 @@ If new parameters or features appear in the API, we will let you know.`},
             });
           }
           if (errStr) add(CHK_G.resp, "err", "API вернул ошибку: " + chkVal(errStr) + '. <a href="#/search/' + encodeURIComponent(errStr.slice(0, 60)) + '">Искать по порталу →</a>');
-          var KE = [
-            [/connection not found/i, "Для этой пары B2B-компания (<code>b2b-client-id</code>) + вендор (<code>vendor-id</code>) на этой среде нет подключения (connection). Проверьте, что оба ID верные и относятся к этой среде (UAT/PROD), и что в Back Office у B2B-компании создано и включено подключение к вендору."],
-            [/vendor not found|unknown vendor/i, "Вендор с таким <code>vendor-id</code> не найден на этой среде."],
-            [/b2b apikey is invalid|api.?key.*invalid/i, "<code>api_key</code> не подходит к <code>b2b_id</code> или к среде."],
-            [/token.*(expired|invalid)|unauthori[sz]ed/i, "Проблема с Bearer-токеном: истёк или выпущен для другой B2B-компании/среды — сгенерируйте новый."]
-          ];
-          if (errStr) KE.forEach(function (k) { if (k[0].test(errStr)) add(CHK_G.resp, "info", k[1]); });
+          if (errStr) CHK_KE.forEach(function (k) { if (k[0].test(errStr)) add(CHK_G.resp, "info", k[1]); });
           if (errStr && /internal/i.test(errStr)) add(CHK_G.resp, "info", "«Internal error» — сбой на стороне сервера, а не ошибка формата запроса. Если по запросу выше ошибок нет, передайте в разработку время запроса" + (lt ? " (" + esc(lt.raw) + ")" : "") + ", " + chkC("b2b-client-id") + " и тело запроса — по ним найдут запрос в логах.");
           if (rv.error_code != null && rv.error_code !== 0 && rv.error_code !== "0") add(CHK_G.resp, "err", chkC("error_code") + " = " + chkVal(rv.error_code) + (CHK_ERR_CODES[rv.error_code] ? ": " + esc(CHK_ERR_CODES[rv.error_code]) : "") + (rv.error_message ? " (" + chkC("error_message") + ": " + chkVal(rv.error_message) + ")" : "") + ".");
           else if (rv.error_code === 0 || rv.error_code === "0") add(CHK_G.resp, "ok", chkC("error_code") + " = 0 — успешная обработка.");
