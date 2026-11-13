@@ -2395,6 +2395,25 @@ If new parameters or features appear in the API, we will let you know.`},
       if (!req.method) req.method = req.body != null || req.bodyFromFile ? "POST" : "GET";
       return req;
     }
+    /* лог PHP: Data: array ( … ) Header: array ( 0 => 'K: V' ) */
+    if (/=>/.test(t) && /\barray\s*\(/i.test(t)) {
+      req.kind = "php"; req.goLog = true;
+      var um = t.match(/https?:\/\/[^\s'"\u2018\u2019,)]+/); if (um) req.url = um[0];
+      var mm2 = t.match(/(?:^|[\s'"\u2018])(?:method\s*(?:=>|[=:])\s*['"\u2018]?)?\b(GET|POST|PUT|PATCH|DELETE)\b/); if (mm2) req.method = mm2[1].toUpperCase();
+      var lab = /(^|\n)\s*([A-Za-z_ ]+?)\s*:\s*(?=array\s*\(|\[)/gi, lm, blocks = [];
+      while ((lm = lab.exec(t))) blocks.push({ name: lm[2].toLowerCase(), at: lab.lastIndex });
+      if (!blocks.length) blocks.push({ name: "data", at: t.search(/array\s*\(/i) });
+      blocks.forEach(function (bl) {
+        var v = chkPhp(t, bl.at).v;
+        if (/head/.test(bl.name)) {
+          var arr = Array.isArray(v) ? v : Object.keys(v).map(function (k) { return /^\d+$/.test(k) ? v[k] : k + ": " + v[k]; });
+          arr.forEach(function (x) { addHeader(String(x)); });
+        } else if (/^(url|uri|endpoint)$/.test(bl.name)) { /* редко */ }
+        else if (req.body == null) req.body = JSON.stringify(v);
+      });
+      req.notes.push("Распознан лог PHP (Data / Header: array (…)). Числа и boolean приведены по схеме портала." + (req.url ? "" : " URL в логе нет — эндпоинт подобран по полям тела, проверьте его в списке «Эндпоинт»."));
+      return req;
+    }
     /* лог Go-сервиса: method=POST url=… Headers:map[…] Body:map[…] */
     if (/(^|\s)method=\w+/.test(t) && /(^|\s)url=\S+/.test(t)) {
       req.kind = "golog"; req.goLog = true;
@@ -2511,6 +2530,56 @@ If new parameters or features appear in the API, we will let you know.`},
     if (Array.isArray(v) && sch.items) v = v.map(function (x) { return chkCoerce(schemas, sch.items, x, (depth || 0) + 1); });
     return v;
   }
+  /* PHP var_export / print_r: array ( 'k' => 'v', 0 => 'x', 'n' => array (…) ) */
+  function chkPhp(s, i) {
+    var n = s.length;
+    function ws() { while (i < n && /[\s,]/.test(s[i])) i++; }
+    function str() {
+      var q = s[i], close = q === "\u2018" || q === "\u2019" ? /[\u2018\u2019']/ : q === "\u201c" || q === "\u201d" ? /[\u201c\u201d"]/ : null, out = "";
+      i++;
+      while (i < n) {
+        var c = s[i];
+        if (c === "\\" && i + 1 < n) { out += s[i + 1]; i += 2; continue; }
+        if (close ? close.test(c) : c === q) {
+          /* «умная» кавычка внутри строки: закрывающая только перед , ) ] => или концом строки */
+          if (close && !/^\s*(,|\)|\]|=>|$)/m.test(s.slice(i + 1, i + 6))) { out += c; i++; continue; }
+          i++; return out;
+        }
+        out += c; i++;
+      }
+      return out;
+    }
+    function scalar() {
+      if (/['"\u2018\u2019\u201c\u201d]/.test(s[i])) return str();
+      var m = /^[^,)\]\n]+/.exec(s.slice(i)); var t = m ? m[0].trim() : ""; i += m ? m[0].length : 0;
+      if (/^(true|false)$/i.test(t)) return t.toLowerCase() === "true";
+      if (/^null$/i.test(t)) return null;
+      if (/^-?\d+(\.\d+)?$/.test(t)) return +t;
+      return t;
+    }
+    function val() {
+      ws();
+      var m = /^(array\s*\(|\[)/i.exec(s.slice(i));
+      if (!m) return scalar();
+      var end = m[0] === "[" ? "]" : ")"; i += m[0].length;
+      var o = {}, keys = [];
+      while (i < n) {
+        ws();
+        if (s[i] === end) { i++; break; }
+        var k, save = i, km = null;
+        if (/['"\u2018\u2019\u201c\u201d]/.test(s[i])) k = str(); else { km = /^[\w.-]+/.exec(s.slice(i)); k = km ? km[0] : ""; i += k.length; }
+        var am = /^\s*=>\s*/.exec(s.slice(i));
+        if (!am) { i = save; k = String(keys.length); var v0 = val(); o[k] = v0; keys.push(k); continue; }
+        i += am[0].length;
+        o[k] = val(); keys.push(k);
+        if (i === save) i++;
+      }
+      var seq = keys.every(function (k, j) { return String(j) === String(k); });
+      return seq && keys.length ? keys.map(function (k) { return o[k]; }) : o;
+    }
+    var v = val();
+    return { v: v, i: i };
+  }
   /* ответ из лога: status_code=400 response={…} / Body:map[…] / HTTP/1.1 400 */
   function chkRespLog(text) {
     var t = String(text || "").trim(), r = { body: t, code: "", notes: [] };
@@ -2522,6 +2591,9 @@ If new parameters or features appear in the API, we will let you know.`},
       var b = bm[1].trim();
       if (/^map\[/.test(b)) b = JSON.stringify(chkGoMap(b, 0).v);
       r.body = b;
+    } else if (/^\s*array\s*\(/i.test(t)) {
+      r.body = JSON.stringify(chkPhp(t, t.search(/array\s*\(/i)).v);
+      r.notes.push("Ответ распознан как PHP-массив (var_export).");
     } else if (cm) {
       var j = t.search(/[{\[]/); r.body = j >= 0 ? t.slice(j).trim() : "";
     }
@@ -2674,12 +2746,42 @@ If new parameters or features appear in the API, we will let you know.`},
   };
 
   /* --- основная проверка --- */
+  /* подбор эндпоинта по набору полей тела, когда URL нет */
+  function chkGuess(body, method) {
+    var jb = chkJson(body); if (!jb.ok || !jb.value || typeof jb.value !== "object" || Array.isArray(jb.value)) return [];
+    var keys = Object.keys(jb.value); if (!keys.length) return [];
+    var out = [];
+    DATA.apis.forEach(function (api) {
+      Object.keys(api.operations).forEach(function (uid) {
+        var op = api.operations[uid], sch = op.body && chkDeref(api.schemas, op.body.schema);
+        if (!sch || !sch.properties || (method && op.method !== method)) return;
+        var props = Object.keys(sch.properties), req = sch.required || [];
+        var hit = keys.filter(function (k) { return props.indexOf(k) >= 0; }).length;
+        var miss = req.filter(function (k) { return keys.indexOf(k) < 0; }).length;
+        var extra = keys.length - hit;
+        if (!hit) return;
+        out.push({ api: api, op: op, score: hit * 10 - miss * 6 - extra * 8 - (props.length - hit) });
+      });
+    });
+    out.sort(function (a, b) { return b.score - a.score; });
+    return out.filter(function (x) { return x.score >= out[0].score - 2; }).slice(0, 4);
+  }
+  /* время из лога: 2026-11-12 15:55:06 GMT +8 / 2026-11-12T07:55:06Z */
+  function chkLogTime(t) {
+    var m = /(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}(?::\d{2})?)(?:\.\d+)?\s*(Z|(?:GMT|UTC)?\s*([+-])\s*(\d{1,2})(?::?(\d{2}))?)?/.exec(String(t || ""));
+    if (!m) return null;
+    var ms = Date.parse(m[1] + "T" + (m[2].length === 5 ? m[2] + ":00" : m[2]) + "Z");
+    if (isNaN(ms)) return null;
+    if (m[4]) ms -= (m[4] === "-" ? -1 : 1) * ((+m[5]) * 60 + (+(m[6] || 0))) * 60000;
+    return { ms: ms, raw: m[0].trim(), tz: !!m[3] };
+  }
   function chkRun(inp) {
     var res = { items: [], api: null, op: null, cands: [], req: null, auto: !inp.pick, bodyVal: undefined, respVal: undefined, respText: "" };
     function add(g, l, t) { res.items.push({ g: g, l: l, t: t }); }
     var reqText = inp.req || "", respText = inp.resp || "";
     if (!String(respText).trim()) { var sp = chkSplit(reqText); reqText = sp.req; respText = sp.resp; }
     res.respText = respText;
+    var lt = chkLogTime(reqText + "\n" + respText);
     var req = chkParse(reqText); res.req = req;
     var url = chkUrl(req.url); res.url = url;
     if (!req.kind) { add(CHK_G.url, "err", "Запрос не вставлен."); return chkDone(res); }
@@ -2693,7 +2795,9 @@ If new parameters or features appear in the API, we will let you know.`},
     }
     if (!res.op) {
       res.auto = true;
-      if (!req.url) add(CHK_G.url, "err", "В запросе не найден URL. Вставьте curl или строку вида <code>POST https://…/api/v1/…</code>, либо выберите эндпоинт вручную в списке.");
+      var guess = !req.url && req.body != null ? chkGuess(req.body, req.method) : [];
+      if (guess.length) { res.api = guess[0].api; res.op = guess[0].op; res.cands = guess; res.guessed = true; }
+      else if (!req.url) add(CHK_G.url, "err", "В запросе не найден URL. Вставьте curl или строку вида <code>POST https://…/api/v1/…</code>, либо выберите эндпоинт вручную в списке.");
       else {
         found = chkFind(req.method, url);
         if (found.cands.length) { res.api = found.cands[0].api; res.op = found.cands[0].op; res.cands = found.cands; }
@@ -2710,7 +2814,7 @@ If new parameters or features appear in the API, we will let you know.`},
       return chkDone(res);
     }
     var templ = /[<{]/.test(op.path);
-    add(CHK_G.url, "ok", (res.auto ? "Эндпоинт определён по URL: " : "Эндпоинт выбран вручную: ") + "<b>" + esc(op.method + " " + op.path) + "</b> — " + esc(api.title) + (op.summary ? ", " + esc(op.summary) : ""));
+    add(CHK_G.url, res.guessed ? "warn" : "ok", (res.guessed ? "URL нет — эндпоинт подобран по полям тела (проверьте!): " : res.auto ? "Эндпоинт определён по URL: " : "Эндпоинт выбран вручную: ") + "<b>" + esc(op.method + " " + op.path) + "</b> — " + esc(api.title) + (op.summary ? ", " + esc(op.summary) : ""));
     if (found && found.how === "suffix") add(CHK_G.url, "warn", "Путь в запросе " + chkC(url.path) + " длиннее, чем в портале (" + chkC(op.path) + "): перед ним есть лишний префикс.");
     if (res.auto && res.cands.length > 1) {
       var others = res.cands.slice(1).map(function (x) { return esc(x.api.title); });
@@ -2802,7 +2906,11 @@ If new parameters or features appear in the API, we will let you know.`},
             var jw = chkJwt(av.replace(/^bearer\s+/i, "").trim());
             if (!jw) add(CHK_G.head, "warn", chkC("Authorization") + ": токен не похож на JWT (три части через точку) — проверьте, что вставлен целиком.");
             else {
-              if (jw.exp && jw.exp * 1000 < Date.now()) add(CHK_G.head, "err", chkC("Authorization") + ": срок действия токена истёк " + chkDate(jw.exp * 1000) + " — сгенерируйте новый (<code>POST /api/v1/b2b/token</code>).");
+              if (jw.exp && lt && lt.tz) {
+                if (jw.exp * 1000 < lt.ms) add(CHK_G.head, "err", chkC("Authorization") + ": на момент запроса (" + esc(lt.raw) + ") токен уже истёк — " + chkDate(jw.exp * 1000) + ". Сгенерируйте новый (<code>POST /api/v1/b2b/token</code>).");
+                else add(CHK_G.head, "ok", chkC("Authorization") + ": на момент запроса (" + esc(lt.raw) + ") токен действовал — до " + chkDate(jw.exp * 1000) + (jw.exp * 1000 < Date.now() ? " (сейчас уже истёк, для повтора нужен новый)" : "") + ".");
+              }
+              else if (jw.exp && jw.exp * 1000 < Date.now()) add(CHK_G.head, "err", chkC("Authorization") + ": срок действия токена истёк " + chkDate(jw.exp * 1000) + " — сгенерируйте новый (<code>POST /api/v1/b2b/token</code>).");
               else if (jw.exp) add(CHK_G.head, "ok", chkC("Authorization") + ": Bearer-токен, действует до " + chkDate(jw.exp * 1000) + ".");
               else add(CHK_G.head, "ok", chkC("Authorization") + ": Bearer-токен в формате JWT.");
               var cid = hget("b2b-client-id")[0];
@@ -2878,7 +2986,13 @@ If new parameters or features appear in the API, we will let you know.`},
         ranked.sort(function (x, y) { return x.score - y.score || (y.ok2 ? 1 : 0) - (x.ok2 ? 1 : 0); });
         if (code && !chosen && list.length) add(CHK_G.resp, "info", "Код " + chkC(code) + " в портале для этого эндпоинта не описан; описаны: " + list.map(function (r) { return chkC(r.code); }).join(", ") + ".");
         var use = chosen || ranked[0];
-        if (use) {
+        var errLike = rv && typeof rv === "object" && !Array.isArray(rv) && (typeof rv.error === "string" && rv.error || typeof rv.Error === "string" && rv.Error);
+        if (use && errLike && use.ok2 && !chosen) {
+          add(CHK_G.resp, "info", "Это ответ-ошибка; её схема для этого эндпоинта в портале не описана.");
+          use = null; res.respErrNoSchema = true;
+        }
+        if (res.respErrNoSchema) { /* уже сообщили */ }
+        else if (use) {
           var rd = use.r.description ? " — " + esc(use.r.description) : "";
           if (!use.bad && use.ok2) add(CHK_G.resp, "ok", "Ответ соответствует схеме успешного ответа " + chkC(use.r.code) + ".");
           else if (!use.bad) {
@@ -2890,6 +3004,7 @@ If new parameters or features appear in the API, we will let you know.`},
         if (rv && typeof rv === "object" && !Array.isArray(rv)) {
           var errStr = typeof rv.error === "string" && rv.error ? rv.error : (typeof rv.Error === "string" && rv.Error ? rv.Error : "");
           if (errStr) add(CHK_G.resp, "err", "API вернул ошибку: " + chkVal(errStr) + '. <a href="#/search/' + encodeURIComponent(errStr.slice(0, 60)) + '">Искать по порталу →</a>');
+          if (errStr && /internal/i.test(errStr)) add(CHK_G.resp, "info", "«Internal error» — сбой на стороне сервера, а не ошибка формата запроса. Если по запросу выше ошибок нет, передайте в разработку время запроса" + (lt ? " (" + esc(lt.raw) + ")" : "") + ", " + chkC("b2b-client-id") + " и тело запроса — по ним найдут запрос в логах.");
           if (rv.error_code != null && rv.error_code !== 0 && rv.error_code !== "0") add(CHK_G.resp, "err", chkC("error_code") + " = " + chkVal(rv.error_code) + (CHK_ERR_CODES[rv.error_code] ? ": " + esc(CHK_ERR_CODES[rv.error_code]) : "") + (rv.error_message ? " (" + chkC("error_message") + ": " + chkVal(rv.error_message) + ")" : "") + ".");
           else if (rv.error_code === 0 || rv.error_code === "0") add(CHK_G.resp, "ok", chkC("error_code") + " = 0 — успешная обработка.");
         }
