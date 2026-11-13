@@ -51,6 +51,10 @@ const CASES = [
     text: `GET https://transaction.uat.agg.bet/api/v1/b2b/games\nb2b-client-id: ${UUID}` },
   { name: "Ошибки в теле: тип, enum, лишняя запятая", exp: { op: "POST /api/v1/b2b/start/game", level: "err", has: ["ожидается boolean", "не входит в допустимые", "лишняя запятая"] },
     text: `curl -X POST 'https://transaction.uat.agg.bet/api/v1/b2b/start/game' -H 'Authorization: Bearer <token>' -H 'b2b-client-id: ${UUID}' -H 'request-id: ${UUID}' -H 'Content-Type: application/json' -d '{"game_id":"${UUID}","is_test":"true","browser_session":{"device":"Desktop"},}'` },
+  { name: "Ответ из мессенджера: потерянные \\ перед кавычками", exp: { op: null, has: ["client_id\\\" is expected as UUID", "должен быть UUID"] },
+    text: `Ответ:\n{“error”:“”client_id” is expected as UUID”}` },
+  { name: "Ответ не JSON — простой текст ошибки", exp: { op: null, has: ["не является валидным JSON", "должен быть UUID"] },
+    text: `Ответ:\nerror: client_id is expected as UUID` },
   { name: "Секреты не попадают в текст для ИИ", exp: { op: "POST /api/v1/b2b/token", maskedNot: ["testkey0000", "eyJhbGciOiJIUzI1NiJ9.eyJleHAiOjF9.c2lnbmF0dXJl"] },
     text: `curl -X POST 'https://transaction.uat.agg.bet/api/v1/b2b/token' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJleHAiOjF9.c2lnbmF0dXJl' -H 'Content-Type: application/json' -d '${TOKEN_BODY}'` }
 ];

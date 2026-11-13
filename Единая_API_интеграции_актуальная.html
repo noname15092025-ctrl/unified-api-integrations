@@ -2606,6 +2606,28 @@ If new parameters or features appear in the API, we will let you know.`},
   }
 
   /* --- JSON с понятной диагностикой --- */
+  function chkFixInnerQuotes(t) {
+    var out = "", inStr = false;
+    for (var i = 0; i < t.length; i++) {
+      var c = t[i];
+      if (c === "\\" && inStr) { out += c + (t[i + 1] || ""); i++; continue; }
+      if (c !== '"') { out += c; continue; }
+      if (!inStr) { inStr = true; out += c; continue; }
+      /* закрывающая, если дальше (после пробелов) идёт : , } ] или конец */
+      var rest = t.slice(i + 1).replace(/^\s+/, "");
+      if (!rest || /^[:,}\]]/.test(rest)) { inStr = false; out += c; }
+      else out += '\\"';
+    }
+    return out;
+  }
+  /* текст ошибки из невалидного JSON / простого текста */
+  function chkErrFromText(t) {
+    t = String(t || "").replace(/[“”„«»]/g, '"');
+    var m = /"?(?:error|message|msg|error_message)"?\s*[:=]\s*"([\s\S]*)"\s*[,}]?\s*$/i.exec(t);
+    if (m) return m[1].replace(/\\"/g, '"');
+    t = t.trim();
+    return t.length && t.length < 500 && !/^</.test(t) ? t : "";
+  }
   function chkJson(text) {
     var r = { ok: false, value: undefined, error: "", where: "", hints: [], fixed: false };
     try { r.value = JSON.parse(text); r.ok = true; return r; } catch (e) { r.error = String(e && e.message || e); }
@@ -2622,7 +2644,11 @@ If new parameters or features appear in the API, we will let you know.`},
     var open = (text.match(/[{\[]/g) || []).length, close = (text.match(/[}\]]/g) || []).length;
     if (open !== close) r.hints.push("не сходится число открывающих и закрывающих скобок (" + open + " и " + close + ")");
     var t2 = text.replace(/[“”„«»]/g, '"').replace(/,(\s*[}\]])/g, "$1").replace(/:\s*None\b/g, ": null").replace(/:\s*True\b/g, ": true").replace(/:\s*False\b/g, ": false");
-    try { r.value = JSON.parse(t2); r.fixed = true; } catch (e2) {}
+    try { r.value = JSON.parse(t2); r.fixed = true; } catch (e2) {
+      /* кавычки внутри строк потеряли «\» (частое после мессенджеров): экранируем те, что не являются границей строки */
+      var t3 = chkFixInnerQuotes(t2);
+      try { r.value = JSON.parse(t3); r.fixed = true; r.hints.push("внутри строки есть кавычки без <code>\\</code> (было <code>\\\"</code>, потерялось при копировании)"); } catch (e3) {}
+    }
     return r;
   }
 
@@ -2925,11 +2951,18 @@ If new parameters or features appear in the API, we will let you know.`},
     return { ms: ms, raw: m[0].trim(), tz: !!m[3] };
   }
   var CHK_KE = [
+    [/"?([\w.-]+)"?\s+is expected as uuid/i, function (m) { return chkC(m[1]) + " должен быть UUID (вида <code>11111111-2222-4333-8444-555555555555</code>). Проверьте значение: это может быть заголовок (<code>" + esc(m[1].replace(/_/g, "-")) + "</code>) или поле тела. Частая причина — передан не тот ID (например, числовой ID вместо UUID) или пустое значение."; }],
+    [/"?([\w.-]+)"?\s+is required|missing (?:required )?(?:field|parameter|header)\s+"?([\w.-]+)/i, function (m) { return "Не передано обязательное " + chkC(m[1] || m[2]) + " — сверьте с описанием эндпоинта."; }],
+    [/"?([\w.-]+)"?\s+(?:is invalid|invalid value|has invalid format)/i, function (m) { return "Неверное значение " + chkC(m[1]) + " — проверьте формат по описанию эндпоинта."; }],
     [/connection not found/i, "Для этой пары B2B-компания (<code>b2b-client-id</code>) + вендор (<code>vendor-id</code>) на этой среде нет подключения (connection). Проверьте, что оба ID верные и относятся к этой среде (UAT/PROD), и что в Back Office у B2B-компании создано и включено подключение к вендору."],
     [/vendor not found|unknown vendor/i, "Вендор с таким <code>vendor-id</code> не найден на этой среде."],
     [/b2b apikey is invalid|api.?key.*invalid/i, "<code>api_key</code> не подходит к <code>b2b_id</code> или к среде."],
     [/token.*(expired|invalid)|unauthori[sz]ed/i, "Проблема с Bearer-токеном: истёк или выпущен для другой B2B-компании/среды — сгенерируйте новый."]
   ];
+  function chkKE(text, cb) {
+    var done = 0;
+    CHK_KE.forEach(function (k) { if (done) return; var m = k[0].exec(text); if (m) { cb(typeof k[1] === "function" ? k[1](m) : k[1]); if (typeof k[1] === "function") done = 1; } });
+  }
   function chkRun(inp) {
     var res = { items: [], api: null, op: null, cands: [], req: null, auto: !inp.pick, bodyVal: undefined, respVal: undefined, respText: "" };
     function add(g, l, t) { res.items.push({ g: g, l: l, t: t }); }
@@ -2947,14 +2980,20 @@ If new parameters or features appear in the API, we will let you know.`},
       var rlo = chkRespLog(respText); rlo.notes.forEach(function (n) { add(CHK_G.resp, "info", esc(n)); });
       res.respText = rlo.body;
       var jo = chkJson(rlo.body);
-      if (!jo.ok && !jo.fixed) { add(CHK_G.resp, "warn", "Ответ не является JSON" + (jo.hints.length ? ": " + jo.hints.join("; ") : "") + "."); return chkDone(res); }
+      if (!jo.ok && !jo.fixed) {
+        add(CHK_G.resp, "warn", "Ответ не является валидным JSON" + (jo.hints.length ? ": " + jo.hints.join("; ") : "") + ". Текст ошибки разобран как есть.");
+        var et = chkErrFromText(rlo.body);
+        if (et) { add(CHK_G.resp, "err", "API вернул ошибку: " + chkValLong(et) + "."); chkKE(et, function (t) { add(CHK_G.resp, "info", t); }); }
+        return chkDone(res);
+      }
+      if (jo.fixed && jo.hints.length) add(CHK_G.resp, "info", "JSON ответа исправлен автоматически: " + jo.hints.join("; ") + ".");
       var ro = jo.value; res.respVal = ro;
       if (jo.ok) add(CHK_G.resp, "ok", "Ответ — валидный JSON.");
       if (ro && typeof ro === "object" && !Array.isArray(ro)) {
         var es = typeof ro.error === "string" ? ro.error : ro.error && typeof ro.error === "object" ? (ro.error.code != null ? ro.error.code + " " : "") + (ro.error.message || "") : typeof ro.Msg === "string" && ro.Error ? ro.Error + " " + ro.Msg : "";
         if (es) {
           add(CHK_G.resp, "err", "API вернул ошибку: " + chkValLong(es) + '. <a href="#/search/' + encodeURIComponent(String(es).slice(0, 60)) + '">Искать по порталу →</a>');
-          CHK_KE.forEach(function (k) { if (k[0].test(es)) add(CHK_G.resp, "info", k[1]); });
+          chkKE(es, function (t) { add(CHK_G.resp, "info", t); });
           if (/internal/i.test(es)) add(CHK_G.resp, "info", "«Internal error» — сбой на стороне сервера; передайте в разработку время запроса, b2b-client-id и тело запроса.");
           var ids = String(es).match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi) || [];
           ids.forEach(function (id) { var nm = CHK_VENDOR_SUB[id.replace(/-/g, "").toLowerCase()]; if (nm) add(CHK_G.resp, "info", chkC(id) + " — это vendor_id <b>" + esc(nm) + "</b>."); });
@@ -3183,7 +3222,11 @@ If new parameters or features appear in the API, we will let you know.`},
     respText = rl.body;
     if (String(respText).trim()) {
       var jr = chkJson(String(respText).trim());
-      if (!jr.ok && !jr.fixed) add(CHK_G.resp, "warn", "Ответ не является JSON" + (/^\s*</.test(respText) ? " (похоже на HTML-страницу — обычно это ответ прокси/шлюза, а не API)" : "") + " — структура не проверялась.");
+      if (!jr.ok && !jr.fixed) {
+        add(CHK_G.resp, "warn", "Ответ не является JSON" + (/^\s*</.test(respText) ? " (похоже на HTML-страницу — обычно это ответ прокси/шлюза, а не API)" : "") + " — структура не проверялась.");
+        var et2 = chkErrFromText(respText);
+        if (et2 && !/^\s*</.test(respText)) { add(CHK_G.resp, "err", "Текст ответа: " + chkValLong(et2) + "."); chkKE(et2, function (t) { add(CHK_G.resp, "info", t); }); }
+      }
       else {
         res.respVal = jr.value;
         var rv = jr.value, list = (Array.isArray(op.responses) ? op.responses : []).filter(function (r) { return r && r.schema; });
@@ -3232,7 +3275,7 @@ If new parameters or features appear in the API, we will let you know.`},
             });
           }
           if (errStr) add(CHK_G.resp, "err", "API вернул ошибку: " + chkValLong(errStr) + '. <a href="#/search/' + encodeURIComponent(errStr.slice(0, 60)) + '">Искать по порталу →</a>');
-          if (errStr) CHK_KE.forEach(function (k) { if (k[0].test(errStr)) add(CHK_G.resp, "info", k[1]); });
+          if (errStr) chkKE(errStr, function (t) { add(CHK_G.resp, "info", t); });
           if (errStr && /internal/i.test(errStr)) add(CHK_G.resp, "info", "«Internal error» — сбой на стороне сервера, а не ошибка формата запроса. Если по запросу выше ошибок нет, передайте в разработку время запроса" + (lt ? " (" + esc(lt.raw) + ")" : "") + ", " + chkC("b2b-client-id") + " и тело запроса — по ним найдут запрос в логах.");
           if (rv.error_code != null && rv.error_code !== 0 && rv.error_code !== "0") add(CHK_G.resp, "err", chkC("error_code") + " = " + chkVal(rv.error_code) + (CHK_ERR_CODES[rv.error_code] ? ": " + esc(CHK_ERR_CODES[rv.error_code]) : "") + (rv.error_message ? " (" + chkC("error_message") + ": " + chkVal(rv.error_message) + ")" : "") + ".");
           else if (rv.error_code === 0 || rv.error_code === "0") add(CHK_G.resp, "ok", chkC("error_code") + " = 0 — успешная обработка.");
