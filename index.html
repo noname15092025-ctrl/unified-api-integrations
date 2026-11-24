@@ -874,6 +874,14 @@ If new parameters or features appear in the API, we will let you know.`},
 {t:"bonus",q:`extended_campaign returns 500 with session_spin_amount_trigger`,a:`At least one trigger needs to be present in the trigger object. 'first_game_launch_trigger' is a required parameter. If you send only first_game_launch_trigger = false, you will get an error — this is intentional. Use the parameter set to true in your request.`},
 {t:"bonus",q:`Если у игрока несколько FS-кампаний и одну отменить — какая будет следующей?`,a:`Если у игрока есть 3 ФС кампании и одну отменить, то следующей будет та, которая была создана раньше по времени.`},
 
+{t:"bonus",q:`В транзакциях по ФС в поле bonus_id приходит то же значение, что клиент передал в b2b_campaign_id при создании кампании?`,a:`В поле b2b_campaign возвращается значение, полученное в поле b2b_campaign_id при создании бонусной кампании.`},
+{t:"bonus",q:`Что возвращается при попытке удалить уже удалённую или несуществующую бонусную кампанию?`,a:`При повторном удалении уже удалённой бонусной кампании возвращается HTTP 400:
+{
+  "error": "invalid argument: the bonus campaign does not belong to the game from the request"
+}
+
+Ответ для изначально несуществующей кампании отдельно не уточнён.`},
+
 ];
 </script>
 <script>
