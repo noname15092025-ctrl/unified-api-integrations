@@ -867,7 +867,29 @@ Payout is the total amount of all payouts: the sum of all type 1 transactions (w
 {t:"rounds",q:`What happens to games during maintenance?`,a:`Scheduled maintenance is every Tuesday 09:00–11:00 (UTC+3). During this time games are temporarily unavailable and can't be launched — there will be an error about game unavailability or another error.`},
 
 {t:"bonus",q:`How do we get available bets for a bonus campaign?`,a:`Use https://transaction.softgga.bet/api/v1/b2b/bonuses/bet-ranges to Get Available Bets.`},
-{t:"bonus",q:`Which method creates a free spins campaign?`,a:`POST /api/v1/b2b/bonuses/campaign
+{t:"bonus",q:`Which method creates a free spins campaign?`,a:`Create bonus campaign — создание бонусной кампании.
+
+URL: https://transaction.uat.agg.bet/api/v1/b2b/bonuses/campaign
+
+Пример запроса:
+{
+  "b2b_campaign_id": "test_for_provider2",
+  "name": "test",
+  "valid_from": "2025-03-03T14:15:22Z",
+  "valid_until": "2025-12-15T14:15:22Z",
+  "description": "AGG",
+  "quantity": 1,
+  "b2c_id": "a606cae2-3311-4162-8da6-1042a5aee5bc",
+  "game_id": "e2fdc4f7-4c61-4d57-8423-1cf64704515a",
+  "currency": "USD",
+  "bet_id": null,
+  "amount": 30
+}
+
+Примечания:
+• Если в [List Of Available Bets](https://transaction.uat.agg.bet/b2b-swagger/docs#operation/listOfAvailableBets) нет подходящего ID, укажите \`null\` без кавычек. Если ID есть, укажите его строкой в кавычках.
+• Для \`b2b_campaign_id\` можно задать произвольное название бонусной кампании.
+• \`valid_until\` — дата и время окончания действия бонусной кампании.
 
 If new parameters or features appear in the API, we will let you know.`},
 {t:"bonus",q:`The campaign was created but isn't activated in the game`,a:`First get the list of available bets, then create a bonus campaign, and then launch the game - all under the same player.`},
