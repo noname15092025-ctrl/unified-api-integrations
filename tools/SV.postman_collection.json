@@ -1,9 +1,10 @@
 {
   "info": {
     "_postman_id": "e3ccdded-4a2f-443f-8806-3981b5b1af89",
-    "name": "SV (Support) — примеры запросов",
+    "name": "SV",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Готовые запросы для тестов. Секреты убраны: перед использованием заполните переменные коллекции (token, api_key, client_key, x_api_key, basic_username, basic_password, login_email, login_password). Всегда могут быть ошибки — перепроверяйте запросы по документации."
+    "_exporter_id": "48349943",
+    "_collection_link": "https://go.postman.co/collection/48349943-e3ccdded-4a2f-443f-8806-3981b5b1af89?source=collection_link"
   },
   "item": [
     {
@@ -17,7 +18,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{token}}",
+                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NzYzODQ4MDEsImIyYl9pZCI6ImI2MjRkNzA0LTBhNTItNGVhMS04MjkxLTc5MjRlOTM5ZmE1NSJ9.rpaYILlXhAwt29NYVaecH7QsI2kEze5roJzLQj3uQg0",
                   "type": "string"
                 }
               ]
@@ -90,7 +91,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\r\n\"client_id\": \"1xbet\",\r\n\"client_key\": \"{{client_key}}\"\r\n}",
+              "raw": "{\r\n\"client_id\": \"1xbet\",\r\n\"client_key\": \"oFoGvTXwhBuSbnbZ9e7lgeOkCzH283aSkLMQginjY4NMN3SfHN9Rynt4lWIs9fjq\"\r\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -128,7 +129,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{token}}",
+                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjbGllbnRfaWQiOiAiMXhiZXQifQ.bxw7ooqLC548dbKuv0Z7pGp2WdrCoP6FxHQuJlH0uf4",
                   "type": "string"
                 }
               ]
@@ -202,7 +203,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\r\n\"b2b_id\": \"b624d704-0a52-4ea1-8291-7924e939fa55\",\r\n\"api_key\": \"{{api_key}}\"\r\n}",
+          "raw": "{\r\n\"b2b_id\": \"b624d704-0a52-4ea1-8291-7924e939fa55\",\r\n\"api_key\": \"mIweG4C2Y1phJomRmtHCfw6U\"\r\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -271,196 +272,6 @@
       "response": []
     },
     {
-      "name": "start/game",
-      "request": {
-        "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{token}}",
-              "type": "string"
-            }
-          ]
-        },
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json",
-            "type": "text"
-          },
-          {
-            "key": "Authorization",
-            "value": "Bearer",
-            "type": "text"
-          },
-          {
-            "key": "b2b-client-id",
-            "value": "b624d704-0a52-4ea1-8291-7924e939fa55",
-            "type": "text"
-          },
-          {
-            "key": "request-id",
-            "value": "107aec16-87dc-4623-ad3e-b5c24e4f3a12",
-            "type": "text"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\r\n\"game_id\": \"9740c07d-710f-4795-a1a5-3d779141f38e\",\r\n\"is_test\": true,\r\n\"b2c\": {\r\n\"id\": \"b624d704-0a52-4ea1-8291-7924e939fa55_12345qwerty\",\r\n\"country\": \"st\",\r\n\"int_id\": 2147483647,\r\n\"nickname\": \"string\"\r\n},\r\n\"balance\": {\r\n\"currency\": \"USD\",\r\n\"amount\": 100\r\n},\r\n\"browser_session\": {\r\n\"ip\": \"80.251.117.219\",\r\n\"os\": \"MacIS\",\r\n\"device\": \"desktop\",\r\n\"browser\": \"chrome\",\r\n\"fingerprint\": \"string\",\r\n\"java_enabled\": true,\r\n\"language\": \"en\",\r\n\"color_depth\": 0,\r\n\"screen_height\": 0,\r\n\"screen_width\": 0,\r\n\"timezone_offset\": \"00:00:00\"\r\n}\r\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        },
-        "url": {
-          "raw": "https://transaction.uat.agg.bet/api/v1/b2b/start/game",
-          "protocol": "https",
-          "host": [
-            "transaction",
-            "uat",
-            "agg",
-            "bet"
-          ],
-          "path": [
-            "api",
-            "v1",
-            "b2b",
-            "start",
-            "game"
-          ]
-        }
-      },
-      "response": []
-    },
-    {
-      "name": "bonuses/campaign",
-      "request": {
-        "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{token}}",
-              "type": "string"
-            }
-          ]
-        },
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json",
-            "type": "text"
-          },
-          {
-            "key": "Authorization",
-            "value": "Bearer",
-            "type": "text"
-          },
-          {
-            "key": "b2b-client-id",
-            "value": "b624d704-0a52-4ea1-8291-7924e939fa55",
-            "type": "text"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\r\n  \"b2b_campaign_id\": \"b624d704-0a52-4ea1-8291-7924e939fa55\",\r\n  \"name\": \"test1\",\r\n  \"valid_from\": \"2025-12-08T14:15:22Z\",\r\n  \"valid_until\": \"2025-12-24T14:15:22Z\",\r\n  \"description\": \"string\",\r\n  \"quantity\": 2,\r\n  \"b2c_id\": \"3218603200\",\r\n  \"game_id\": \"e2fdc4f7-4c61-4d57-8423-1cf64704515a\",\r\n  \"currency\": \"USD\",\r\n  \"bet_id\": \"null\",\r\n  \"amount\": 30.01\r\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        },
-        "url": {
-          "raw": "https://transaction.uat.agg.bet/api/v1/b2b/bonuses/campaign",
-          "protocol": "https",
-          "host": [
-            "transaction",
-            "uat",
-            "agg",
-            "bet"
-          ],
-          "path": [
-            "api",
-            "v1",
-            "b2b",
-            "bonuses",
-            "campaign"
-          ]
-        }
-      },
-      "response": []
-    },
-    {
-      "name": "start/game - blaze",
-      "request": {
-        "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{token}}",
-              "type": "string"
-            }
-          ]
-        },
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json",
-            "type": "text"
-          },
-          {
-            "key": "Authorization",
-            "value": "Bearer",
-            "type": "text"
-          },
-          {
-            "key": "b2b-client-id",
-            "value": "b624d704-0a52-4ea1-8291-7924e939fa55",
-            "type": "text"
-          },
-          {
-            "key": "request-id",
-            "value": "{{$guid}}",
-            "type": "text"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\r\n    \"game_id\": \"efc149a7-4276-47bd-99fb-407252925433\",\r\n    \"b2c\": {\r\n        \"id\": \"456789123\",\r\n        \"country\": \"gb\",\r\n        \"nickname\": \"bob\"\r\n    },\r\n    \"balance\": {\r\n        \"currency\": \"USD\",\r\n        \"amount\": 1000\r\n    },\r\n    \"browser_session\": {\r\n        \"ip\": \"80.251.117.219\",\r\n        \"os\": \"MacOS\",\r\n        \"device\": \"desktop\",\r\n        \"browser\": \"chrome\",\r\n        \"fingerprint\": \"string\",\r\n        \"java_enabled\": false,\r\n        \"language\": \"en\",\r\n        \"color_depth\": 12,\r\n        \"screen_height\": 150,\r\n        \"screen_width\": 150,\r\n        \"timezone_offset\": \"-03:00:00\"\r\n    }\r\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        },
-        "url": {
-          "raw": "https://transaction.uat.agg.bet/api/v1/b2b/start/game",
-          "protocol": "https",
-          "host": [
-            "transaction",
-            "uat",
-            "agg",
-            "bet"
-          ],
-          "path": [
-            "api",
-            "v1",
-            "b2b",
-            "start",
-            "game"
-          ]
-        }
-      },
-      "response": []
-    },
-    {
       "name": "start/game - м",
       "request": {
         "auth": {
@@ -468,7 +279,7 @@
           "bearer": [
             {
               "key": "token",
-              "value": "{{token}}",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTc1OTc4NzAsImIyYl9pZCI6ImI2MjRkNzA0LTBhNTItNGVhMS04MjkxLTc5MjRlOTM5ZmE1NSJ9.F07NJjCuH1BTvy3ybJ-jvdwkiCgTzJeO6rKoL_tNE4E",
               "type": "string"
             }
           ]
@@ -526,6 +337,326 @@
       "response": []
     },
     {
+      "name": "start/game",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTc1OTM5NjAsImIyYl9pZCI6ImI2MjRkNzA0LTBhNTItNGVhMS04MjkxLTc5MjRlOTM5ZmE1NSJ9.BbIOQE9zIoLneI9Fepdmx_SbikzjhYCFtpN18UhkcpM",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer",
+            "type": "text"
+          },
+          {
+            "key": "b2b-client-id",
+            "value": "b624d704-0a52-4ea1-8291-7924e939fa55",
+            "type": "text"
+          },
+          {
+            "key": "request-id",
+            "value": "107aec16-87dc-4623-ad3e-b5c24e4f3a12",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n\"game_id\": \"9740c07d-710f-4795-a1a5-3d779141f38e\",\r\n\"is_test\": true,\r\n\"b2c\": {\r\n\"id\": \"b624d704-0a52-4ea1-8291-7924e939fa55_12345qwerty\",\r\n\"country\": \"st\",\r\n\"int_id\": 2147483647,\r\n\"nickname\": \"string\"\r\n},\r\n\"balance\": {\r\n\"currency\": \"USD\",\r\n\"amount\": 100\r\n},\r\n\"browser_session\": {\r\n\"ip\": \"80.251.117.219\",\r\n\"os\": \"MacIS\",\r\n\"device\": \"desktop\",\r\n\"browser\": \"chrome\",\r\n\"fingerprint\": \"string\",\r\n\"java_enabled\": true,\r\n\"language\": \"en\",\r\n\"color_depth\": 0,\r\n\"screen_height\": 0,\r\n\"screen_width\": 0,\r\n\"timezone_offset\": \"00:00:00\"\r\n}\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://transaction.uat.agg.bet/api/v1/b2b/start/game",
+          "protocol": "https",
+          "host": [
+            "transaction",
+            "uat",
+            "agg",
+            "bet"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "b2b",
+            "start",
+            "game"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "start/game /launch FOR Eurovirtuals Platform",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              ""
+            ]
+          }
+        },
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// 1. Укажите здесь ваш секретный ключ Eurovirtuals\r\nconst secretKey = \"94d96746c57691404063a2882849621bfd6ab8e27001ca1f43d407db0d60cefa\"; \r\n\r\n// 2. Получаем текущее время в секундах (Unix epoch seconds)\r\nconst timestamp = Math.floor(Date.now() / 1000).toString();\r\n\r\n// 3. Берем \"сырое\" тело запроса ровно в том виде, в котором оно на вкладке Body\r\nconst rawBody = pm.request.body.raw;\r\n\r\n// 4. Формируем строку для подписи: <timestamp>.<body>\r\nconst stringToSign = `${timestamp}.${rawBody}`;\r\n\r\n// 5. Считаем HMAC-SHA256 и переводим в hex (нижний регистр)\r\nconst signature = CryptoJS.HmacSHA256(stringToSign, secretKey).toString(CryptoJS.enc.Hex);\r\n\r\n// 6. Сохраняем значения в переменные окружения Postman, чтобы подставить их в Headers\r\npm.environment.set(\"x_timestamp\", timestamp);\r\npm.environment.set(\"x_signature\", signature);\r\n\r\nconsole.log(\"Сгенерирован timestamp:\", timestamp);\r\nconsole.log(\"Сгенерирована подпись:\", signature);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "x-timestamp",
+            "value": "{{x_timestamp}}"
+          },
+          {
+            "key": "x-signature",
+            "value": "{{x_signature}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"betLimits\": {\r\n        \"maxStake\": 20000,\r\n        \"maxWin\": 20000000,\r\n        \"minStake\": 0.1\r\n    },\r\n    \"country\": \"KE\",\r\n    \"currency\": \"USD\",\r\n    \"device\": \"DESKTOP\",\r\n    \"exchangeRateUSD\": 1,\r\n    \"gameCode\": \"b103fcaf-5efd-46fc-a271-7cb25db3e9bb\",\r\n    \"language\": \"EN\",\r\n    \"lobbyUrl\": \"https://next-gen-ui.betkraft.co.uk\",\r\n    \"mode\": \"REAL\",\r\n    \"operatorId\": \"c3f88f6a-397e-4228-867b-f1684a2c3e1f\",\r\n    \"playerId\": \"aaaaaaaaaaano\",\r\n    \"projectId\": \"6\",\r\n    \"sessionId\": \"TOKEN\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://transaction.uat.softgga.dev/api/v1/eurovirtuals/launch",
+          "protocol": "https",
+          "host": [
+            "transaction",
+            "uat",
+            "softgga",
+            "dev"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "eurovirtuals",
+            "launch"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "bonuses/campaign",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NjUzMDc5NDIsImIyYl9pZCI6ImI2MjRkNzA0LTBhNTItNGVhMS04MjkxLTc5MjRlOTM5ZmE1NSJ9.VvvRvCzpY4h01vUuvUzVb6upEUBn1JPCNrGYEFlSLow",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer",
+            "type": "text"
+          },
+          {
+            "key": "b2b-client-id",
+            "value": "b624d704-0a52-4ea1-8291-7924e939fa55",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"b2b_campaign_id\": \"b624d704-0a52-4ea1-8291-7924e939fa55\",\r\n  \"name\": \"test1\",\r\n  \"valid_from\": \"2025-12-08T14:15:22Z\",\r\n  \"valid_until\": \"2025-12-24T14:15:22Z\",\r\n  \"description\": \"string\",\r\n  \"quantity\": 2,\r\n  \"b2c_id\": \"3218603200\",\r\n  \"game_id\": \"e2fdc4f7-4c61-4d57-8423-1cf64704515a\",\r\n  \"currency\": \"USD\",\r\n  \"bet_id\": \"null\",\r\n  \"amount\": 30.01\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://transaction.uat.agg.bet/api/v1/b2b/bonuses/campaign",
+          "protocol": "https",
+          "host": [
+            "transaction",
+            "uat",
+            "agg",
+            "bet"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "b2b",
+            "bonuses",
+            "campaign"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "remove-campaign",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer"
+          },
+          {
+            "key": "b2b-client-id",
+            "value": "b624d704-0a52-4ea1-8291-7924e939fa55"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"campaign_id\": \"325dad22-5f21-4013-a704-be709b17da21\",\r\n  \"game_id\": \"cb8f1a9e-8e21-41e9-b620-daf95fce7019\",\r\n  \"b2c_id\": \"ad4ce89f-d883-4b66-a4fc-3c6929ccebe3\",\r\n  \"currency\": \"USD\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://transaction.uat.agg.bet/api/v1/b2b/bonuses/remove-campaign",
+          "protocol": "https",
+          "host": [
+            "transaction",
+            "uat",
+            "agg",
+            "bet"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "b2b",
+            "bonuses",
+            "remove-campaign"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "start/game - blaze",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NjU5MzEyMTQsImIyYl9pZCI6ImI2MjRkNzA0LTBhNTItNGVhMS04MjkxLTc5MjRlOTM5ZmE1NSJ9.VhvRzFVw7Ef-dsLnNl2awb4ffvc8ZzYUzCRNE8UzDmg",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer",
+            "type": "text"
+          },
+          {
+            "key": "b2b-client-id",
+            "value": "b624d704-0a52-4ea1-8291-7924e939fa55",
+            "type": "text"
+          },
+          {
+            "key": "request-id",
+            "value": "{{$guid}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"game_id\": \"efc149a7-4276-47bd-99fb-407252925433\",\r\n    \"b2c\": {\r\n        \"id\": \"456789123\",\r\n        \"country\": \"gb\",\r\n        \"nickname\": \"bob\"\r\n    },\r\n    \"balance\": {\r\n        \"currency\": \"USD\",\r\n        \"amount\": 1000\r\n    },\r\n    \"browser_session\": {\r\n        \"ip\": \"80.251.117.219\",\r\n        \"os\": \"MacOS\",\r\n        \"device\": \"desktop\",\r\n        \"browser\": \"chrome\",\r\n        \"fingerprint\": \"string\",\r\n        \"java_enabled\": false,\r\n        \"language\": \"en\",\r\n        \"color_depth\": 12,\r\n        \"screen_height\": 150,\r\n        \"screen_width\": 150,\r\n        \"timezone_offset\": \"-03:00:00\"\r\n    }\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://transaction.uat.agg.bet/api/v1/b2b/start/game",
+          "protocol": "https",
+          "host": [
+            "transaction",
+            "uat",
+            "agg",
+            "bet"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "b2b",
+            "start",
+            "game"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
       "name": "Get game list",
       "protocolProfileBehavior": {
         "disableBodyPruning": true
@@ -536,7 +667,7 @@
           "bearer": [
             {
               "key": "token",
-              "value": "{{token}}",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NjQzNTQwMTQsImIyYl9pZCI6ImI2MjRkNzA0LTBhNTItNGVhMS04MjkxLTc5MjRlOTM5ZmE1NSJ9.844ktLg4s0YzvQCiZchH9pBe3CO8mznwVCX8KmMZDAI",
               "type": "string"
             }
           ]
@@ -617,7 +748,7 @@
           },
           {
             "key": "Authorization",
-            "value": "{{token}}",
+            "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NjUyODMwMjYsImIyYl9pZCI6ImI2MjRkNzA0LTBhNTItNGVhMS04MjkxLTc5MjRlOTM5ZmE1NSJ9.6qC6T4h_yYyZ2X6vPquvJUTAhfWs7yrDAtlCv1KY7Mg",
             "type": "text"
           },
           {
@@ -693,7 +824,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\r\n    \"query\": \"mutation { login(email: \\\"{{login_email}}\\\", password: \\\"{{login_password}}\\\") { token } }\"\r\n}",
+          "raw": "{\r\n    \"query\": \"mutation { login(email: \\\"kirill.bogorad@broit.io\\\", password: \\\"petersonsbetb2b\\\") { token } }\"\r\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -822,7 +953,7 @@
         "header": [
           {
             "key": "Authorization",
-            "value": "{{token}}",
+            "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NjcwNjg4MTAsImIyYl9pZCI6ImI2MjRkNzA0LTBhNTItNGVhMS04MjkxLTc5MjRlOTM5ZmE1NSJ9.XOQ1G5RamqYeXn02IwaijRgcEpJALrmjsbxKRe1oPKs",
             "type": "text"
           },
           {
@@ -868,7 +999,7 @@
           "bearer": [
             {
               "key": "token",
-              "value": "{{token}}",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODA1NjkzNTEsImIyYl9pZCI6ImI2MjRkNzA0LTBhNTItNGVhMS04MjkxLTc5MjRlOTM5ZmE1NSJ9.jPbV7Q1VxlES36zSkjPciYEicNz_GeOzSOpVrS4apSQ",
               "type": "string"
             }
           ]
@@ -928,12 +1059,12 @@
           "basic": [
             {
               "key": "password",
-              "value": "{{basic_password}}",
+              "value": "r!Vb49EP74X5*14X4",
               "type": "string"
             },
             {
               "key": "username",
-              "value": "{{basic_username}}",
+              "value": "mcl-stage",
               "type": "string"
             }
           ]
@@ -983,12 +1114,12 @@
           "basic": [
             {
               "key": "password",
-              "value": "{{basic_password}}",
+              "value": "r!Vb49EP74X5*14X4",
               "type": "string"
             },
             {
               "key": "username",
-              "value": "{{basic_username}}",
+              "value": "mcl-stage",
               "type": "string"
             }
           ]
@@ -1046,7 +1177,7 @@
           },
           {
             "key": "Authorization",
-            "value": "Bearer {{token}}",
+            "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODcwNTUxNDksImIyYl9pZCI6ImI2MjRkNzA0LTBhNTItNGVhMS04MjkxLTc5MjRlOTM5ZmE1NSJ9.ul9Mr3sLRtee0B3IjWLmuPL14zdTWhW6RxlFMYUjJuk",
             "type": "text"
           },
           {
@@ -1098,7 +1229,7 @@
           "bearer": [
             {
               "key": "token",
-              "value": "{{token}}",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODg0NTg0MzAsImIyYl9pZCI6ImI2MjRkNzA0LTBhNTItNGVhMS04MjkxLTc5MjRlOTM5ZmE1NSJ9.Wi2wkIzEuXBPW_f_LgqWaMWyYbkGKH2eomyj4ACxUaw",
               "type": "string"
             }
           ]
@@ -1127,7 +1258,7 @@
           },
           {
             "key": "X-API-KEY",
-            "value": "{{x_api_key}}",
+            "value": "93ae7aea-2226-45a5-b091-4bc2e2b659eb",
             "type": "text"
           }
         ],
@@ -1160,48 +1291,184 @@
         }
       },
       "response": []
+    },
+    {
+      "name": "bet",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "async function generateSignature() {\r\n    const body = '{\"Amount\":3,\"Currency\":\"USD\",\"RoundId\":\"01a07be0\",\"TransactionId\":\"01a07be0\",\"PlayerId\":\"123443qwerty\",\"SessionId\":\"6e5c4131-5d52-4671-aa78-b4dd7b8b72dc\",\"GameId\":\"sugar-stacks-1000\"}';\r\n    const secret = '5fecc647ae4548ed8f480883940a5398';\r\n    \r\n    // SHA-512\r\n    const encoder = new TextEncoder();\r\n    const data = encoder.encode(body + secret);\r\n    const hashBuffer = await crypto.subtle.digest('SHA-512', data);\r\n    const hashArray = Array.from(new Uint8Array(hashBuffer));\r\n    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');\r\n    \r\n    // hex → base64\r\n    const signature = btoa(String.fromCharCode(...hashArray));\r\n    \r\n    console.log('Подпись:', signature);\r\n    console.log('Длина:', signature.length);\r\n    return signature;\r\n}\r\n\r\ngenerateSignature();"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "b2b-client-id",
+            "value": "b624d704-0a52-4ea1-8291-7924e939fa55"
+          },
+          {
+            "key": "Authorization",
+            "value": "WTumWy44LYE9nCHWippKqPMdsGL5PmJgEJGZ0XQ/Nn4aGU87diYKC7TKMrQU0jL00wcKXLRUHDephjRIYUxy4A=="
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"Amount\":3,\"Currency\":\"USD\",\"RoundId\":\"01a07be0-8eb4-73c1-9750-749107d22278\",\"TransactionId\":\"01a07be0-8ebd-7362-9dc7-734338222252\",\"PlayerId\":\"123443qwerty\",\"SessionId\":\"6e5c4131-5d52-4671-aa78-b4dd7b8b72dc\",\"GameId\":\"sugar-stacks-1000\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://0e2e69e92ef741f39d98ea3e6f691629.transaction.uat.agg.bet/api/v1/vendor/Bet",
+          "protocol": "https",
+          "host": [
+            "0e2e69e92ef741f39d98ea3e6f691629",
+            "transaction",
+            "uat",
+            "agg",
+            "bet"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "vendor",
+            "Bet"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "https://api.example.com/v1/transaction",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Signature sha512=b7c8f3a2e9d1c4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"Amount\":3,\"Currency\":\"USD\",\"RoundId\":\"01a07be0-8eb4-73c1-9750-749107d22278\",\"TransactionId\":\"01a07be0-8ebd-7362-9dc7-734338222252\",\"PlayerId\":\"123443qwerty\",\"SessionId\":\"6e5c4131-5d52-4671-aa78-b4dd7b8b72dc\",\"GameId\":\"sugar-stacks-1000\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://api.example.com/v1/transaction",
+          "protocol": "https",
+          "host": [
+            "api",
+            "example",
+            "com"
+          ],
+          "path": [
+            "v1",
+            "transaction"
+          ]
+        },
+        "description": "Generated from cURL: curl -X POST https://api.example.com/v1/transaction \\\r\n  -H \"Content-Type: application/json\" \\\r\n  -H \"Authorization: Signature sha512=b7c8f3a2e9d1c4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0\" \\\r\n  -d '{\"Amount\":3,\"Currency\":\"USD\",\"RoundId\":\"01a07be0-8eb4-73c1-9750-749107d22278\",\"TransactionId\":\"01a07be0-8ebd-7362-9dc7-734338222252\",\"PlayerId\":\"123443qwerty\",\"SessionId\":\"6e5c4131-5d52-4671-aa78-b4dd7b8b72dc\",\"GameId\":\"sugar-stacks-1000\"}'"
+      },
+      "response": []
+    },
+    {
+      "name": "https://ifconfig.me/ip - чек моего айпи",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "https://ifconfig.me/ip",
+          "protocol": "https",
+          "host": [
+            "ifconfig",
+            "me"
+          ],
+          "path": [
+            "ip"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "/freeBets/availableBets - для PeterSon",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Server-Authorization",
+            "value": "e9d4c7a1b3f5e7d9c1a3b5f7e9d1c3a5b7f9e1d3c5a7b9f1e3d5c7a9b1f3e5d7"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"games\": [\r\n    \"johnan_legendarian\"\r\n  ],\r\n  \"currencies\": [\r\n    \"usd\"\r\n  ],\r\n  \"operator\": \"betb2b2\",\r\n  \"brand\": \"test-brand\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://staging.spinart.cloud/wallet/betb2b1/freeBets/availableBets",
+          "protocol": "https",
+          "host": [
+            "staging",
+            "spinart",
+            "cloud"
+          ],
+          "path": [
+            "wallet",
+            "betb2b1",
+            "freeBets",
+            "availableBets"
+          ]
+        }
+      },
+      "response": []
     }
   ],
   "variable": [
     {
-      "key": "token",
-      "value": "",
-      "type": "string"
+      "key": "auth_secret_00ew",
+      "secret": true
     },
     {
-      "key": "api_key",
-      "value": "",
-      "type": "string"
+      "key": "json_web_token_00ew",
+      "secret": true
     },
     {
-      "key": "client_key",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "x_api_key",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "basic_username",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "basic_password",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "login_email",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "login_password",
-      "value": "",
-      "type": "string"
+      "key": "auth_password_0yt7",
+      "secret": true
     }
   ]
 }
