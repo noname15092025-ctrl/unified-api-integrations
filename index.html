@@ -907,7 +907,7 @@ If new parameters or features appear in the API, we will let you know.`},
 Ответ для изначально несуществующей кампании отдельно не уточнён.`},
 {t:"bonus",q:`Какие провайдеры поддерживают бонусные активности через FreeBonus с типом транзакции promo_win?`,a:`На данный момент такой сценарий поддерживается только для Winfinity. У некоторых других провайдеров также используется тип транзакции promo_win, но он отправляется стандартным методом win, а не через FreeBonus.
 
-Если появится новый провайдер с поддержкой promo_win через FreeBonus, команда договорилась заранее предупредить партнёров, чтобы они могли добавить его в маппинг типов бонусов.\n\nИсточник обсуждения: https://lnk.reddy.team/message/710121/4387`},
+Если появится новый провайдер с поддержкой promo_win через FreeBonus, команда договорилась заранее предупредить партнёров, чтобы они могли добавить его в маппинг типов бонусов.`,u:"https://lnk.reddy.team/message/710121/4387"},
 
 ];
 </script>
@@ -2186,7 +2186,7 @@ If new parameters or features appear in the API, we will let you know.`},
     "faq-tg": {
       list: TG_FAQ, topics: TG_TOPICS, title: "FAQ TG", badge: "TG", filterId: "tg-filter", q: "tq",
       note: "Вопросы партнёров и ответы @supphelper1 из рабочих чатов Telegram.",
-      answer: function (it) { return '<div class="ans-plain">' + esc(it.a) + "</div>" + tgSources(it); }
+      answer: function (it) { var src = it.u ? '<div class="extra tg-src"><b>Источник обсуждения:</b> <a href="' + attr(it.u) + '" target="_blank" rel="noopener">открыть переписку</a></div>' : ""; return '<div class="ans-plain">' + esc(it.a) + "</div>" + src + tgSources(it); }
     },
     "faq-slack": {
       list: SL_FAQ, topics: SL_TOPICS, title: "FAQ Slack", badge: "Slack", filterId: "sl-filter", q: "sq",
